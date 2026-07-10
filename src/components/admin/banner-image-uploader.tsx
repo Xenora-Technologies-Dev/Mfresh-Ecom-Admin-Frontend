@@ -3,27 +3,27 @@
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import { CheckCircle2, Upload, X, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Label } from "@/components/ui/input";
-import { uploadCategoryImage, storageUrl } from "@/lib/api/client";
+import { uploadBannerImage, storageUrl } from "@/lib/api/client";
+import { formatApiError } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-interface CategoryImageUploaderProps {
+interface BannerImageUploaderProps {
   value?: string;
   imageUrl?: string;
-  categoryId?: string;
-  label?: string;
+  bannerId?: string;
   onChange: (path: string, url: string) => void;
   className?: string;
 }
 
-export function CategoryImageUploader({
+export function BannerImageUploader({
   value,
   imageUrl,
-  categoryId,
-  label = "Category Image",
+  bannerId,
   onChange,
   className,
-}: CategoryImageUploaderProps) {
+}: BannerImageUploaderProps) {
   const [preview, setPreview] = useState(
     imageUrl ? storageUrl(imageUrl) : value ? storageUrl(value) : "",
   );
@@ -35,33 +35,47 @@ export function CategoryImageUploader({
 
   const handleFile = useCallback(
     async (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        const msg = "Please choose a valid image file (JPG, PNG, or WebP).";
+        setError(msg);
+        setUploadStatus("error");
+        toast.error(msg);
+        return;
+      }
+
       setLoading(true);
       setError("");
       setUploadStatus("idle");
       try {
-        const result = await uploadCategoryImage(file, categoryId);
+        const result = await uploadBannerImage(file, bannerId);
         const url = storageUrl(result.url);
         setPreview(url);
         onChange(result.path, url);
         setUploadStatus("success");
-      } catch {
+        toast.success("Banner image uploaded successfully");
+      } catch (err) {
+        const msg = formatApiError(err);
         setUploadStatus("error");
-        setError("Image upload failed. Please check your file and try again.");
+        setError(msg);
+        toast.error(`Image upload failed: ${msg}`);
       } finally {
         setLoading(false);
       }
     },
-    [categoryId, onChange],
+    [bannerId, onChange],
   );
 
   return (
     <div className={cn("space-y-2", className)}>
-      <Label>{label}</Label>
+      <Label>Banner Image</Label>
+      <p className="text-xs text-muted">
+        Recommended: wide image (1920×800). Used on the storefront hero and promo sections.
+      </p>
       <div className="flex items-start gap-3">
-        <label className="flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white hover:border-primary/40">
+        <label className="flex h-24 w-32 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white hover:border-primary/40">
           <Upload className="h-5 w-5 text-muted" />
           <span className="mt-1 text-[10px] text-muted">
-            {loading ? "..." : "Upload"}
+            {loading ? "Uploading…" : "Upload"}
           </span>
           <input
             type="file"
@@ -71,14 +85,15 @@ export function CategoryImageUploader({
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void handleFile(f);
+              e.target.value = "";
             }}
           />
         </label>
         {preview && (
-          <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-border">
+          <div className="relative h-24 w-40 overflow-hidden rounded-lg border border-border">
             <Image
               src={preview}
-              alt="Category"
+              alt="Banner preview"
               fill
               className="object-cover"
               unoptimized
@@ -89,6 +104,7 @@ export function CategoryImageUploader({
                 setPreview("");
                 onChange("", "");
                 setUploadStatus("idle");
+                setError("");
               }}
               className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
             >

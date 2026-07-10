@@ -2,8 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Image from "next/image";
-import { Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CheckCircle2, Upload, X, XCircle } from "lucide-react";
 import { Label } from "@/components/ui/input";
 import { uploadImage, deleteImage, storageUrl } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ export interface UploadedImage {
     medium: string;
     large: string;
   };
+  uploadStatus?: "success" | "error";
 }
 
 interface MultiImageUploaderProps {
@@ -48,9 +48,10 @@ export function MultiImageUploader({
       setError("");
       const added: UploadedImage[] = [];
       const addedIds: string[] = [];
+      let hadError = false;
 
-      try {
-        for (const file of list) {
+      for (const file of list) {
+        try {
           const result = await uploadImage(file, "DISPLAY", true);
           const img: UploadedImage = {
             id: result.id,
@@ -61,17 +62,32 @@ export function MultiImageUploader({
               medium: storageUrl(result.urls.medium),
               large: storageUrl(result.urls.large),
             },
+            uploadStatus: "success",
           };
           added.push(img);
           addedIds.push(result.id);
+        } catch {
+          hadError = true;
+          added.push({
+            id: `failed-${file.name}-${Date.now()}`,
+            type: "DISPLAY",
+            urls: {
+              display: "",
+              thumbnail: "",
+              medium: "",
+              large: "",
+            },
+            uploadStatus: "error",
+          });
         }
-        onChange([...images, ...added]);
-        onNewIds?.([...newImageIds, ...addedIds]);
-      } catch {
-        setError("Upload failed. Check backend and R2/storage configuration.");
-      } finally {
-        setLoading(false);
       }
+
+      onChange([...images, ...added.filter((i) => i.uploadStatus === "success")]);
+      if (addedIds.length) onNewIds?.([...newImageIds, ...addedIds]);
+      if (hadError) {
+        setError("Some images could not be uploaded. Please try again.");
+      }
+      setLoading(false);
     },
     [images, newImageIds, onChange, onNewIds],
   );
@@ -126,13 +142,29 @@ export function MultiImageUploader({
               key={img.id}
               className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-background"
             >
-              <Image
-                src={img.urls.display}
-                alt="Product"
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              {img.urls.display ? (
+                <Image
+                  src={img.urls.display}
+                  alt="Product"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted">
+                  Failed
+                </div>
+              )}
+              {img.uploadStatus === "success" && (
+                <span className="absolute bottom-1 left-1 rounded-full bg-green-600 p-0.5 text-white">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                </span>
+              )}
+              {img.uploadStatus === "error" && (
+                <span className="absolute bottom-1 left-1 rounded-full bg-red-600 p-0.5 text-white">
+                  <XCircle className="h-3.5 w-3.5" />
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => void remove(img)}

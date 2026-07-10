@@ -10,7 +10,7 @@ import { DataTable } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { CategoryImageUploader } from "@/components/admin/category-image-uploader";
-import { downloadCsv } from "@/lib/utils";
+import { downloadCsv, formatApiError } from "@/lib/utils";
 import { categoriesApi } from "@/lib/api";
 import { storageUrl } from "@/lib/api/client";
 import { StatusBadge } from "@/components/admin/data-table";
@@ -81,6 +81,9 @@ export default function CategoriesPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!form.name) {
+        throw new Error("Category name is required.");
+      }
       const payload = toCategoryPayload(form);
       if (editing?.id) return categoriesApi.update(editing.id as string, payload);
       return categoriesApi.create(payload);
@@ -92,7 +95,7 @@ export default function CategoriesPage() {
       setForm({});
       toast.success("Saved successfully");
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to save"),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const deleteMutation = useMutation({
@@ -101,7 +104,7 @@ export default function CategoriesPage() {
       qc.invalidateQueries({ queryKey: ["categories"] });
       toast.success("Deleted successfully");
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to delete"),
+    onError: (err: Error) => toast.error(formatApiError(err)),
   });
 
   const actionColumns: ColumnDef<Record<string, unknown>, unknown>[] = [

@@ -100,7 +100,37 @@ export async function uploadCategoryImage(file: File, categoryId?: string) {
     method: "POST",
     body: form,
   });
-  if (!res.ok) throw new ApiError(await res.text(), res.status);
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.message ?? message;
+    } catch {
+      message = await res.text().catch(() => message);
+    }
+    throw new ApiError(message, res.status);
+  }
+  return res.json() as Promise<{ path: string; url: string }>;
+}
+
+export async function uploadBannerImage(file: File, bannerId?: string) {
+  const form = new FormData();
+  form.append("file", file);
+  const q = bannerId ? `?bannerId=${bannerId}` : "";
+  const res = await fetch(`${API_URL}/images/banner${q}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.message ?? message;
+    } catch {
+      message = await res.text().catch(() => message);
+    }
+    throw new ApiError(message, res.status);
+  }
   return res.json() as Promise<{ path: string; url: string }>;
 }
 

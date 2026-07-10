@@ -20,9 +20,11 @@ import {
   Menu,
   ShoppingBag,
   ClipboardList,
+  FileText,
   LogOut,
   Store,
   BarChart3,
+  Palette,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -42,12 +44,15 @@ const navItems: NavItem[] = [
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
   { href: "/sub-categories", label: "Sub Categories", icon: Layers, roles: ["admin"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin", "seller"] },
+  { href: "/wishlists", label: "Wishlist Shares", icon: ClipboardList, roles: ["admin"] },
+  { href: "/quick-quotes", label: "Quick Quotes", icon: FileText, roles: ["admin"] },
   { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["admin"] },
   { href: "/customers", label: "Customers", icon: Users, roles: ["admin"] },
   { href: "/banners", label: "Banner Management", icon: PanelTop, roles: ["admin"] },
   { href: "/homepage-sections", label: "Homepage Sections", icon: Home, roles: ["admin"] },
   { href: "/countries", label: "Countries", icon: Globe, roles: ["admin"] },
   { href: "/product-images", label: "Product Images", icon: ImageIcon, roles: ["admin"] },
+  { href: "/theme", label: "Theme & Branding", icon: Palette, roles: ["admin"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] },
   { href: "/backup", label: "Backup & Restore", icon: Database, roles: ["admin"] },
 ];
@@ -176,6 +181,7 @@ function getHeaderTitle(pathname: string, role: PortalRole): string {
   if (pathname === "/seller") return "Seller Dashboard";
   if (pathname === "/") return "Operations Dashboard";
   if (pathname.startsWith("/products")) return "Products";
+  if (pathname.startsWith("/theme")) return "Theme & Branding";
   if (pathname.startsWith("/settings")) return "Settings";
   return "MFresh Portal";
 }

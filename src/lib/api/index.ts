@@ -129,6 +129,13 @@ export const settingsApi = {
     }),
 };
 
+export const leadsApi = {
+  list: (p: ListParams) =>
+    api<PaginatedResponse<Record<string, unknown>>>(`/leads${qs(p)}`),
+  get: (id: string) => api<Record<string, unknown>>(`/leads/${id}`),
+  remove: (id: string) => api(`/leads/${id}`, { method: "DELETE" }),
+};
+
 export const backupApi = {
   list: () => api<{ filename: string; createdAt: string }[]>("/backup"),
   create: () => api("/backup/create", { method: "POST" }),

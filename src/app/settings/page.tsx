@@ -1,17 +1,12 @@
 "use client";
 
-
-
+import Link from "next/link";
 import { useState } from "react";
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
+import { Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 import { Input, Label } from "@/components/ui/input";
-
 import { settingsApi } from "@/lib/api";
-
 import { BASE_CURRENCY, CURRENCY_OPTIONS } from "@/lib/currency";
 
 
@@ -107,15 +102,18 @@ export default function SettingsPage() {
 
 
   return (
-
     <div className="mx-auto max-w-2xl space-y-6">
-
-      <div>
-
-        <h2 className="text-2xl font-bold">Settings</h2>
-
-        <p className="text-muted">Global marketplace configuration</p>
-
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Settings</h2>
+          <p className="text-muted">Global marketplace configuration</p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/theme">
+            <Palette className="h-4 w-4" />
+            Theme & Branding
+          </Link>
+        </Button>
       </div>
 
 
