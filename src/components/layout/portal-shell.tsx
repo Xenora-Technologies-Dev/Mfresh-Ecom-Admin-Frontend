@@ -25,6 +25,7 @@ import {
   Store,
   BarChart3,
   Palette,
+  Network,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { href: "/products", label: "Products", icon: Package, roles: ["admin", "seller"] },
   { href: "/wishlists", label: "Wishlist Shares", icon: ClipboardList, roles: ["admin"] },
   { href: "/quick-quotes", label: "Quick Quotes", icon: FileText, roles: ["admin"] },
+  { href: "/distribution", label: "Distribution Forms", icon: Network, roles: ["admin"] },
   { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["admin"] },
   { href: "/customers", label: "Customers", icon: Users, roles: ["admin"] },
   { href: "/banners", label: "Banner Management", icon: PanelTop, roles: ["admin"] },

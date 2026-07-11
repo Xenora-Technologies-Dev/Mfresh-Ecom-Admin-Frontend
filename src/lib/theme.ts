@@ -3,6 +3,8 @@ export const THEME_SETTING_KEY = "storefront_theme";
 export type LogoStyle = "text" | "image";
 export type ThemePresetId = "mfresh-default" | "fresh-mint" | "ocean-blue" | "warm-harvest";
 
+export const DEFAULT_LOGO_PATH = "/images/mfresh-logo.png";
+
 export interface StorefrontTheme {
   preset: ThemePresetId;
   logoStyle: LogoStyle;
@@ -18,18 +20,19 @@ export interface StorefrontTheme {
   borderRadius: "soft" | "rounded" | "sharp";
 }
 
+/** Seller green (#00A651) + logo navy (#2B3481) */
 export const DEFAULT_THEME: StorefrontTheme = {
   preset: "mfresh-default",
-  logoStyle: "text",
-  logoPath: null,
+  logoStyle: "image",
+  logoPath: DEFAULT_LOGO_PATH,
   siteTagline: "Global B2B Food Marketplace",
-  primary: "#4DB87A",
-  secondary: "#FF9A56",
+  primary: "#00A651",
+  secondary: "#2B3481",
   background: "#FFFFFF",
   surface: "#FFFFFF",
-  text: "#2A3B30",
-  heroBackground: "#EFF5F1",
-  freshMint: "#F4FAF6",
+  text: "#2B3481",
+  heroBackground: "#E8F7EE",
+  freshMint: "#F3FAF5",
   borderRadius: "soft",
 };
 
@@ -38,8 +41,8 @@ export const THEME_PRESETS: Record<
   { name: string; description: string; theme: Partial<StorefrontTheme> }
 > = {
   "mfresh-default": {
-    name: "MFresh Light",
-    description: "Soft greens & warm accents — the default MFresh look",
+    name: "MFresh Brand",
+    description: "Seller green with logo navy — the MFresh look",
     theme: { ...DEFAULT_THEME },
   },
   "fresh-mint": {
@@ -47,25 +50,25 @@ export const THEME_PRESETS: Record<
     description: "Airy mint palette for a clean, organic feel",
     theme: {
       preset: "fresh-mint",
-      primary: "#5CB88A",
-      secondary: "#F4A261",
+      primary: "#16A34A",
+      secondary: "#2B3481",
       background: "#F8FCF9",
-      heroBackground: "#EDF7F0",
+      heroBackground: "#EAF8EF",
       freshMint: "#F0FAF4",
-      text: "#1E3D2B",
+      text: "#2B3481",
     },
   },
   "ocean-blue": {
     name: "Ocean Blue",
-    description: "Professional navy with a fresh teal accent",
+    description: "Logo navy lead with seller-green accents",
     theme: {
       preset: "ocean-blue",
-      primary: "#2E3192",
-      secondary: "#4A9FD4",
-      background: "#F8F9FC",
-      heroBackground: "#EEF0F8",
+      primary: "#2B3481",
+      secondary: "#00A651",
+      background: "#F7F9FC",
+      heroBackground: "#EEF2F8",
       freshMint: "#F4F6FB",
-      text: "#1A1D4E",
+      text: "#2B3481",
     },
   },
   "warm-harvest": {
@@ -74,7 +77,7 @@ export const THEME_PRESETS: Record<
     theme: {
       preset: "warm-harvest",
       primary: "#7CB342",
-      secondary: "#E65100",
+      secondary: "#C62828",
       background: "#FFFBF5",
       heroBackground: "#FFF3E0",
       freshMint: "#FFF8F0",
@@ -122,8 +125,11 @@ export function parseTheme(raw: unknown): StorefrontTheme {
     ...DEFAULT_THEME,
     ...data,
     preset: (data.preset as ThemePresetId) ?? DEFAULT_THEME.preset,
-    logoStyle: data.logoStyle === "image" ? "image" : "text",
-    logoPath: typeof data.logoPath === "string" ? data.logoPath : null,
+    logoStyle: data.logoStyle === "text" ? "text" : "image",
+    logoPath:
+      typeof data.logoPath === "string" && data.logoPath
+        ? data.logoPath
+        : DEFAULT_LOGO_PATH,
   };
 }
 
