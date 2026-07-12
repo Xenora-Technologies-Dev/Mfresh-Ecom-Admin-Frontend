@@ -433,89 +433,109 @@ export default function MessagesPage() {
                 <div className="mt-6 space-y-3 rounded-xl border border-border bg-[#f8fafc] p-4">
                   <p className="text-sm">
                     <span className="font-semibold text-dark-gray">Brand / interest: </span>
-                    {(payload.interestLabel as string) ||
-                      (payload.interest as string) ||
-                      "—"}
+                    {String(
+                      (payload.interestLabel as string) ||
+                        (payload.interest as string) ||
+                        "—",
+                    )}
                   </p>
                   <p className="text-sm">
                     <span className="font-semibold text-dark-gray">Territory: </span>
-                    {(payload.territory as string) || "—"}
+                    {String((payload.territory as string) || "—")}
                   </p>
-                  {(payload.note as string) && (
-                    <p className="text-sm whitespace-pre-wrap text-dark-gray">
-                      {String(payload.note)}
+                  {typeof payload.note === "string" && payload.note ? (
+                    <p className="whitespace-pre-wrap text-sm text-dark-gray">
+                      {payload.note}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               )}
 
-              {detail.type === "quote" && (
-                <div className="mt-6 space-y-4">
-                  {payload.product && typeof payload.product === "object" && (
-                    <div className="flex gap-3 rounded-xl border border-border p-3">
-                      {(payload.product as { image?: string }).image && (
-                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-light-gray">
-                          <Image
-                            src={storageUrl(
-                              String((payload.product as { image: string }).image),
-                            )}
-                            alt=""
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-semibold text-dark-gray">
-                          {(payload.product as { name?: string }).name}
-                        </p>
-                        <p className="text-xs text-muted">
-                          {(payload.product as { categoryName?: string }).categoryName}
-                          {" · "}
-                          {(payload.product as { country?: string }).country}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <p className="text-sm">
-                      <span className="font-semibold">Quantity: </span>
-                      {String(payload.quantity ?? "—")}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-semibold">Target price: </span>
-                      {String(payload.targetPrice ?? "—")}
-                    </p>
-                  </div>
-                  {(payload.note as string) && (
-                    <p className="whitespace-pre-wrap rounded-xl border border-border bg-[#f8fafc] p-4 text-sm">
-                      {String(payload.note)}
-                    </p>
-                  )}
-                </div>
-              )}
+              {detail.type === "quote" && (() => {
+                const quoteProduct =
+                  payload.product &&
+                  typeof payload.product === "object" &&
+                  !Array.isArray(payload.product)
+                    ? (payload.product as {
+                        name?: string;
+                        image?: string;
+                        categoryName?: string;
+                        country?: string;
+                      })
+                    : null;
+                const quoteNote =
+                  typeof payload.note === "string" ? payload.note : "";
 
-              {detail.type === "wishlist" && (
-                <div className="mt-6 space-y-2">
-                  {Array.isArray(payload.products) &&
-                    (payload.products as { name?: string; price?: number; currency?: string; country?: string }[]).map(
-                      (p, i) => (
-                        <div
-                          key={`${p.name}-${i}`}
-                          className="rounded-lg border border-border px-3 py-2 text-sm"
-                        >
-                          <span className="font-medium text-dark-gray">{p.name}</span>
-                          <span className="text-muted">
+                return (
+                  <div className="mt-6 space-y-4">
+                    {quoteProduct ? (
+                      <div className="flex gap-3 rounded-xl border border-border p-3">
+                        {quoteProduct.image ? (
+                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-light-gray">
+                            <Image
+                              src={storageUrl(String(quoteProduct.image))}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : null}
+                        <div>
+                          <p className="font-semibold text-dark-gray">
+                            {quoteProduct.name}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {quoteProduct.categoryName}
                             {" · "}
-                            {p.currency} {p.price}
-                            {p.country ? ` · ${p.country}` : ""}
-                          </span>
+                            {quoteProduct.country}
+                          </p>
                         </div>
-                      ),
-                    )}
+                      </div>
+                    ) : null}
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <p className="text-sm">
+                        <span className="font-semibold">Quantity: </span>
+                        {String(payload.quantity ?? "—")}
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-semibold">Target price: </span>
+                        {String(payload.targetPrice ?? "—")}
+                      </p>
+                    </div>
+                    {quoteNote ? (
+                      <p className="whitespace-pre-wrap rounded-xl border border-border bg-[#f8fafc] p-4 text-sm">
+                        {quoteNote}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()}
+
+              {detail.type === "wishlist" && Array.isArray(payload.products) ? (
+                <div className="mt-6 space-y-2">
+                  {(
+                    payload.products as {
+                      name?: string;
+                      price?: number;
+                      currency?: string;
+                      country?: string;
+                    }[]
+                  ).map((p, i) => (
+                    <div
+                      key={`${p.name}-${i}`}
+                      className="rounded-lg border border-border px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-dark-gray">{p.name}</span>
+                      <span className="text-muted">
+                        {" · "}
+                        {p.currency} {p.price}
+                        {p.country ? ` · ${p.country}` : ""}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              )}
+              ) : null}
 
               {(detail.type === "contact" ||
                 detail.type === "buyer" ||
