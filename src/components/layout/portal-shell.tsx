@@ -19,23 +19,25 @@ import {
   ChevronLeft,
   Menu,
   ShoppingBag,
-  ClipboardList,
-  FileText,
   LogOut,
   Store,
   BarChart3,
   Palette,
-  Network,
+  Mail,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuthStore, type PortalRole } from "@/store/auth-store";
+import { leadsApi } from "@/lib/api";
+import { getMessagesSeenAt } from "@/lib/messages";
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: PortalRole[];
+  badge?: "messages";
 };
 
 const navItems: NavItem[] = [
@@ -45,9 +47,13 @@ const navItems: NavItem[] = [
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
   { href: "/sub-categories", label: "Sub Categories", icon: Layers, roles: ["admin"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin", "seller"] },
-  { href: "/wishlists", label: "Wishlist Shares", icon: ClipboardList, roles: ["admin"] },
-  { href: "/quick-quotes", label: "Quick Quotes", icon: FileText, roles: ["admin"] },
-  { href: "/distribution", label: "Distribution Forms", icon: Network, roles: ["admin"] },
+  {
+    href: "/messages",
+    label: "Messages",
+    icon: Mail,
+    roles: ["admin"],
+    badge: "messages",
+  },
   { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["admin"] },
   { href: "/customers", label: "Customers", icon: Users, roles: ["admin"] },
   { href: "/banners", label: "Banner Management", icon: PanelTop, roles: ["admin"] },
@@ -74,7 +80,21 @@ const roleBadgeColors: Record<PortalRole, string> = {
 function PortalSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [seenAt, setSeenAt] = useState<string | null>(null);
   const { user, logout } = useAuthStore();
+
+  useEffect(() => {
+    setSeenAt(getMessagesSeenAt());
+  }, [pathname]);
+
+  const { data: unreadData } = useQuery({
+    queryKey: ["messages-unread", seenAt],
+    queryFn: () => leadsApi.unreadCount(seenAt ?? undefined),
+    enabled: user?.role === "admin",
+    refetchInterval: 30_000,
+  });
+
+  const unreadBadge = unreadData?.count ?? 0;
 
   if (!user) return null;
 
@@ -126,6 +146,10 @@ function PortalSidebar() {
               item.href === "/" || item.href === "/buyer" || item.href === "/seller"
                 ? pathname === item.href
                 : pathname.startsWith(item.href);
+            const showMessagesBadge =
+              item.badge === "messages" &&
+              unreadBadge > 0 &&
+              !pathname.startsWith("/messages");
             return (
               <Link
                 key={`${item.href}-${item.label}`}
@@ -139,7 +163,12 @@ function PortalSidebar() {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {showMessagesBadge && (
+                  <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white shadow-sm">
+                    {unreadBadge > 99 ? "99+" : unreadBadge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -182,6 +211,7 @@ function getHeaderTitle(pathname: string, role: PortalRole): string {
   if (pathname === "/buyer") return "Buyer Dashboard";
   if (pathname === "/seller") return "Seller Dashboard";
   if (pathname === "/") return "Operations Dashboard";
+  if (pathname.startsWith("/messages")) return "Messages";
   if (pathname.startsWith("/products")) return "Products";
   if (pathname.startsWith("/theme")) return "Theme & Branding";
   if (pathname.startsWith("/settings")) return "Settings";

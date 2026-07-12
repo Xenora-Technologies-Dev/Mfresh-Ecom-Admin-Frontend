@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { clearMessagesSectionSeen } from "@/lib/messages";
 
 export type PortalRole = "admin" | "buyer" | "seller";
 
@@ -20,8 +21,14 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      login: (user) => set({ user }),
-      logout: () => set({ user: null }),
+      login: (user) => {
+        clearMessagesSectionSeen();
+        set({ user });
+      },
+      logout: () => {
+        clearMessagesSectionSeen();
+        set({ user: null });
+      },
     }),
     { name: "mfresh-portal-auth" },
   ),

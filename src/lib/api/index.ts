@@ -133,6 +133,17 @@ export const leadsApi = {
   list: (p: ListParams) =>
     api<PaginatedResponse<Record<string, unknown>>>(`/leads${qs(p)}`),
   get: (id: string) => api<Record<string, unknown>>(`/leads/${id}`),
+  unreadCount: (since?: string) =>
+    api<{ count: number }>(
+      `/leads/unread-count${since ? qs({ since }) : ""}`,
+    ),
+  markRead: (id: string, isRead = true) =>
+    api<Record<string, unknown>>(`/leads/${id}/read`, {
+      method: "PATCH",
+      body: JSON.stringify({ isRead }),
+    }),
+  markAllRead: () =>
+    api<{ updated: number }>("/leads/read-all", { method: "PATCH" }),
   remove: (id: string) => api(`/leads/${id}`, { method: "DELETE" }),
 };
 
