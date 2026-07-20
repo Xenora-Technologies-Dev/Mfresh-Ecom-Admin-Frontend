@@ -13,6 +13,7 @@ import {
 import { ProductSpecsForm } from "@/components/admin/product-specs-form";
 import { CountrySelect } from "@/components/admin/country-select";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
+import { useUploadGuard } from "@/hooks/use-upload-guard";
 import {
   productsApi,
   categoriesApi,
@@ -97,6 +98,8 @@ export default function ProductFormPage() {
   const [mainImage, setMainImage] = useState<UploadedImage | null>(null);
   const [subImages, setSubImages] = useState<UploadedImage[]>([]);
   const [newImageIds, setNewImageIds] = useState<string[]>([]);
+  const [imageUploading, setImageUploading] = useState(false);
+  const { requestClose } = useUploadGuard(imageUploading);
 
   const specs =
     (form.specifications as Record<string, string> | null | undefined) ?? {};
@@ -400,6 +403,7 @@ export default function ProductFormPage() {
           onMainChange={setMainImage}
           onSubChange={setSubImages}
           onNewIdsChange={setNewImageIds}
+          onUploadingChange={setImageUploading}
         />
         {newImageIds.length > 0 && (
           <p className="mt-4 text-sm text-primary">
@@ -409,10 +413,23 @@ export default function ProductFormPage() {
       </div>
 
       <div className="flex gap-3">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving..." : "Save Product"}
+        <Button
+          onClick={() => save.mutate()}
+          disabled={save.isPending || imageUploading}
+        >
+          {imageUploading
+            ? "Uploading…"
+            : save.isPending
+              ? "Saving..."
+              : "Save Product"}
         </Button>
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (!requestClose()) return;
+            router.back();
+          }}
+        >
           Cancel
         </Button>
       </div>

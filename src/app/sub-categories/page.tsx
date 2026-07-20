@@ -10,6 +10,7 @@ import { DataTable, StatusBadge } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { CategoryImageUploader } from "@/components/admin/category-image-uploader";
+import { useUploadGuard } from "@/hooks/use-upload-guard";
 import { downloadCsv, formatApiError } from "@/lib/utils";
 import { subCategoriesApi, categoriesApi } from "@/lib/api";
 import { storageUrl } from "@/lib/api/client";
@@ -75,6 +76,14 @@ export default function SubCategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({});
+  const [imageUploading, setImageUploading] = useState(false);
+  const { requestClose } = useUploadGuard(imageUploading);
+
+  const closeModal = () => {
+    if (!requestClose()) return;
+    setModalOpen(false);
+    setImageUploading(false);
+  };
 
   const params = { page, limit: 10, search, sortBy, sortOrder };
 
@@ -99,6 +108,8 @@ export default function SubCategoriesPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sub-categories"] });
+      qc.invalidateQueries({ queryKey: ["categories"] });
+      qc.invalidateQueries({ queryKey: ["categories-all"] });
       setModalOpen(false);
       setEditing(null);
       setForm({});
@@ -227,6 +238,7 @@ export default function SubCategoriesPage() {
                 imageUrl={form.imageUrl as string | undefined}
                 categoryId={editing?.id as string | undefined}
                 onChange={(path) => setForm({ ...form, image: path })}
+                onUploadingChange={setImageUploading}
               />
               <div className="space-y-1.5">
                 <Label>Sort Order</Label>
@@ -250,14 +262,18 @@ export default function SubCategoriesPage() {
               </label>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setModalOpen(false)}>
+              <Button variant="outline" onClick={closeModal}>
                 Cancel
               </Button>
               <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || imageUploading}
               >
-                {saveMutation.isPending ? "Saving..." : "Save"}
+                {imageUploading
+                  ? "Uploading…"
+                  : saveMutation.isPending
+                    ? "Saving..."
+                    : "Save"}
               </Button>
             </div>
           </div>

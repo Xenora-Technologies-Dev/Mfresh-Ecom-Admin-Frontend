@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { ThemePreview } from "@/components/admin/theme-preview";
 import { LogoUploader } from "@/components/admin/logo-uploader";
+import { useUploadGuard } from "@/hooks/use-upload-guard";
 import { settingsApi } from "@/lib/api";
 import {
   DEFAULT_THEME,
@@ -81,6 +82,8 @@ export default function ThemePage() {
   const [theme, setTheme] = useState<StorefrontTheme>(DEFAULT_THEME);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  useUploadGuard(imageUploading);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings"],
@@ -147,8 +150,8 @@ export default function ThemePage() {
               View Storefront
             </Link>
           </Button>
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || isLoading}>
-            {save.isPending ? "Saving..." : saved ? (
+          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || isLoading || imageUploading}>
+            {imageUploading ? "Uploading…" : save.isPending ? "Saving..." : saved ? (
               <>
                 <Check className="h-4 w-4" />
                 Saved!
@@ -243,6 +246,7 @@ export default function ThemePage() {
                   update("logoPath", path);
                   setLogoPreviewUrl(preview);
                 }}
+                onUploadingChange={setImageUploading}
               />
             )}
             {theme.logoStyle === "text" && (

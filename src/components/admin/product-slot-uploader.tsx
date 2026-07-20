@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { CheckCircle2, ImageIcon, Upload, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/input";
 import { uploadImage, deleteImage, storageUrl } from "@/lib/api/client";
-import { formatApiError } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { UploadingOverlay } from "@/components/admin/uploading-overlay";
+import { formatApiError, cn } from "@/lib/utils";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 
 type ImageSlotType = "DISPLAY" | "MAIN" | "SUB";
@@ -19,6 +19,7 @@ interface ProductSlotUploaderProps {
   value?: UploadedImage | null;
   onChange: (image: UploadedImage | null) => void;
   onNewId?: (id: string | null) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   isNewUpload?: boolean;
   aspectClass?: string;
   className?: string;
@@ -31,6 +32,7 @@ export function ProductSlotUploader({
   value,
   onChange,
   onNewId,
+  onUploadingChange,
   isNewUpload,
   aspectClass = "aspect-[4/3]",
   className,
@@ -39,6 +41,10 @@ export function ProductSlotUploader({
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
   const preview = value?.urls.large || value?.urls.display || "";
+
+  useEffect(() => {
+    onUploadingChange?.(loading);
+  }, [loading, onUploadingChange]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -62,7 +68,6 @@ export function ProductSlotUploader({
           },
           uploadStatus: "success",
         };
-        // Replace previous slot image so only one DISPLAY/MAIN remains
         if (previous?.id && previous.id !== result.id) {
           try {
             await deleteImage(previous.id);
@@ -117,21 +122,22 @@ export function ProductSlotUploader({
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("relative space-y-2", className)}>
       <div>
         <Label>{label}</Label>
         <p className="text-xs text-muted">{hint}</p>
       </div>
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="relative flex flex-wrap items-start gap-3">
         <label
           className={cn(
-            "flex w-36 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white hover:border-primary/40",
+            "relative flex w-36 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-white",
             aspectClass,
+            loading ? "pointer-events-none" : "cursor-pointer hover:border-primary/40",
           )}
         >
           <Upload className="h-5 w-5 text-muted" />
           <span className="mt-1 px-2 text-center text-[10px] text-muted">
-            {loading ? "Uploading…" : "Upload"}
+            Upload
           </span>
           <input
             type="file"
@@ -144,6 +150,7 @@ export function ProductSlotUploader({
               e.target.value = "";
             }}
           />
+          <UploadingOverlay show={loading} />
         </label>
 
         {preview ? (
@@ -160,14 +167,16 @@ export function ProductSlotUploader({
               className="object-cover"
               unoptimized
             />
-            <button
-              type="button"
-              onClick={() => void remove()}
-              className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
-              aria-label={`Remove ${label}`}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            {!loading && (
+              <button
+                type="button"
+                onClick={() => void remove()}
+                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                aria-label={`Remove ${label}`}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         ) : (
           <div
@@ -181,12 +190,12 @@ export function ProductSlotUploader({
           </div>
         )}
 
-        {status === "success" && (
+        {status === "success" && !loading && (
           <span className="flex items-center gap-1 text-sm text-green-600">
             <CheckCircle2 className="h-4 w-4" /> OK
           </span>
         )}
-        {status === "error" && (
+        {status === "error" && !loading && (
           <span className="flex items-center gap-1 text-sm text-red-600">
             <XCircle className="h-4 w-4" /> Failed
           </span>

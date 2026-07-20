@@ -1,22 +1,33 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { Upload, X } from "lucide-react";
 import { Label } from "@/components/ui/input";
 import { uploadCategoryImage, storageUrl } from "@/lib/api/client";
+import { UploadingOverlay } from "@/components/admin/uploading-overlay";
 import { cn } from "@/lib/utils";
 
 interface LogoUploaderProps {
   value: string | null;
   onChange: (path: string | null, previewUrl: string | null) => void;
+  onUploadingChange?: (uploading: boolean) => void;
   className?: string;
 }
 
-export function LogoUploader({ value, onChange, className }: LogoUploaderProps) {
+export function LogoUploader({
+  value,
+  onChange,
+  onUploadingChange,
+  className,
+}: LogoUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const preview = value ? storageUrl(value) : null;
+
+  useEffect(() => {
+    onUploadingChange?.(loading);
+  }, [loading, onUploadingChange]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -35,14 +46,17 @@ export function LogoUploader({ value, onChange, className }: LogoUploaderProps) 
   );
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("relative space-y-2", className)}>
       <Label>Custom Logo Image</Label>
       <div className="flex items-start gap-4">
-        <label className="flex h-24 w-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white transition-colors hover:border-primary/40">
+        <label
+          className={cn(
+            "relative flex h-24 w-40 flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-white transition-colors",
+            loading ? "pointer-events-none" : "cursor-pointer hover:border-primary/40",
+          )}
+        >
           <Upload className="h-5 w-5 text-muted" />
-          <span className="mt-1 text-[10px] text-muted">
-            {loading ? "Uploading..." : "Upload logo"}
-          </span>
+          <span className="mt-1 text-[10px] text-muted">Upload logo</span>
           <input
             type="file"
             accept="image/*"
@@ -50,13 +64,15 @@ export function LogoUploader({ value, onChange, className }: LogoUploaderProps) 
             disabled={loading}
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) handleFile(f);
+              if (f) void handleFile(f);
+              e.target.value = "";
             }}
           />
+          <UploadingOverlay show={loading} />
         </label>
 
         {preview && (
-          <div className="relative flex h-24 w-40 items-center justify-center rounded-xl border border-border bg-white p-2">
+          <div className="relative flex h-24 w-40 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-2">
             <Image
               src={preview}
               alt="Logo preview"
@@ -65,14 +81,16 @@ export function LogoUploader({ value, onChange, className }: LogoUploaderProps) 
               className="max-h-full w-auto object-contain"
               unoptimized
             />
-            <button
-              type="button"
-              onClick={() => onChange(null, null)}
-              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow"
-              aria-label="Remove logo"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            {!loading && (
+              <button
+                type="button"
+                onClick={() => onChange(null, null)}
+                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow"
+                aria-label="Remove logo"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -24,11 +24,15 @@ import {
   BarChart3,
   Palette,
   Mail,
+  UserPlus,
+  ClipboardList,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
-import { useAuthStore, type PortalRole } from "@/store/auth-store";
+import type { PortalRole } from "@/lib/auth/roles";
+import { usePortalUser } from "@/hooks/use-portal-user";
 import { leadsApi } from "@/lib/api";
 import { getMessagesSeenAt } from "@/lib/messages";
 
@@ -42,11 +46,10 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin"] },
-  { href: "/buyer", label: "Dashboard", icon: LayoutDashboard, roles: ["buyer"] },
-  { href: "/seller", label: "Dashboard", icon: LayoutDashboard, roles: ["seller"] },
+  { href: "/orders", label: "Orders", icon: ClipboardList, roles: ["admin"] },
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
   { href: "/sub-categories", label: "Sub Categories", icon: Layers, roles: ["admin"] },
-  { href: "/products", label: "Products", icon: Package, roles: ["admin", "seller"] },
+  { href: "/products", label: "Products", icon: Package, roles: ["admin"] },
   {
     href: "/messages",
     label: "Messages",
@@ -56,6 +59,7 @@ const navItems: NavItem[] = [
   },
   { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["admin"] },
   { href: "/customers", label: "Customers", icon: Users, roles: ["admin"] },
+  { href: "/users", label: "Users", icon: UserPlus, roles: ["admin"] },
   { href: "/banners", label: "Banner Management", icon: PanelTop, roles: ["admin"] },
   { href: "/homepage-sections", label: "Homepage Sections", icon: Home, roles: ["admin"] },
   { href: "/countries", label: "Countries", icon: Globe, roles: ["admin"] },
@@ -81,7 +85,7 @@ function PortalSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [seenAt, setSeenAt] = useState<string | null>(null);
-  const { user, logout } = useAuthStore();
+  const { user, logout } = usePortalUser();
 
   useEffect(() => {
     setSeenAt(getMessagesSeenAt());
@@ -143,7 +147,7 @@ function PortalSidebar() {
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
           {nav.map((item) => {
             const active =
-              item.href === "/" || item.href === "/buyer" || item.href === "/seller"
+              item.href === "/"
                 ? pathname === item.href
                 : pathname.startsWith(item.href);
             const showMessagesBadge =
@@ -186,8 +190,7 @@ function PortalSidebar() {
           <button
             type="button"
             onClick={() => {
-              logout();
-              window.location.href = "/login";
+              void logout();
             }}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs text-white/60 transition-colors hover:bg-white/5 hover:text-white"
           >
@@ -208,10 +211,10 @@ function PortalSidebar() {
 }
 
 function getHeaderTitle(pathname: string, role: PortalRole): string {
-  if (pathname === "/buyer") return "Buyer Dashboard";
-  if (pathname === "/seller") return "Seller Dashboard";
   if (pathname === "/") return "Operations Dashboard";
+  if (pathname.startsWith("/orders")) return "Orders";
   if (pathname.startsWith("/messages")) return "Messages";
+  if (pathname.startsWith("/users")) return "Users";
   if (pathname.startsWith("/products")) return "Products";
   if (pathname.startsWith("/theme")) return "Theme & Branding";
   if (pathname.startsWith("/settings")) return "Settings";
@@ -220,9 +223,15 @@ function getHeaderTitle(pathname: string, role: PortalRole): string {
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const user = useAuthStore((s) => s.user);
+  const { user } = usePortalUser();
 
-  if (pathname.startsWith("/login")) {
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/sign-up") ||
+    pathname.startsWith("/accept-invite") ||
+    pathname.startsWith("/tasks") ||
+    pathname.startsWith("/onboarding")
+  ) {
     return <>{children}</>;
   }
 
@@ -265,6 +274,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 >
                   {user.role}
                 </span>
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: "h-8 w-8",
+                    },
+                  }}
+                />
               </div>
             )}
           </div>

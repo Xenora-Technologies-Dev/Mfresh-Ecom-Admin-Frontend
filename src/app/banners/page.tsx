@@ -10,6 +10,7 @@ import { DataTable } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { BannerImageUploader } from "@/components/admin/banner-image-uploader";
+import { useUploadGuard } from "@/hooks/use-upload-guard";
 import { bannersApi } from "@/lib/api";
 import { storageUrl } from "@/lib/api/client";
 import { downloadCsv, formatApiError } from "@/lib/utils";
@@ -113,6 +114,14 @@ export default function BannersPage() {
     isEnabled: true,
     sortOrder: 0,
   });
+  const [imageUploading, setImageUploading] = useState(false);
+  const { requestClose } = useUploadGuard(imageUploading);
+
+  const closeModal = () => {
+    if (!requestClose()) return;
+    setModalOpen(false);
+    setImageUploading(false);
+  };
 
   const params = {
     page,
@@ -290,6 +299,7 @@ export default function BannersPage() {
                 imageUrl={form.imageUrl as string | undefined}
                 bannerId={editing?.id as string | undefined}
                 onChange={(path) => setForm({ ...form, image: path })}
+                onUploadingChange={setImageUploading}
               />
               <div className="space-y-1.5">
                 <Label>CTA Text</Label>
@@ -353,14 +363,18 @@ export default function BannersPage() {
               </label>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setModalOpen(false)}>
+              <Button variant="outline" onClick={closeModal}>
                 Cancel
               </Button>
               <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
+                disabled={saveMutation.isPending || imageUploading}
               >
-                {saveMutation.isPending ? "Saving…" : "Save"}
+                {imageUploading
+                  ? "Uploading…"
+                  : saveMutation.isPending
+                    ? "Saving…"
+                    : "Save"}
               </Button>
             </div>
           </div>

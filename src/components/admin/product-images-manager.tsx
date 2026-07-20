@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 import { ProductSlotUploader } from "@/components/admin/product-slot-uploader";
 import { ProductSubImagesUploader } from "@/components/admin/product-sub-images-uploader";
@@ -33,6 +34,7 @@ interface ProductImagesManagerProps {
   onMainChange: (img: UploadedImage | null) => void;
   onSubChange: (imgs: UploadedImage[]) => void;
   onNewIdsChange: (ids: string[]) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export function ProductImagesManager({
@@ -44,7 +46,33 @@ export function ProductImagesManager({
   onMainChange,
   onSubChange,
   onNewIdsChange,
+  onUploadingChange,
 }: ProductImagesManagerProps) {
+  const [slotUploading, setSlotUploading] = useState({
+    display: false,
+    main: false,
+    sub: false,
+  });
+
+  const reportUploading = useCallback(
+    (next: { display: boolean; main: boolean; sub: boolean }) => {
+      onUploadingChange?.(next.display || next.main || next.sub);
+    },
+    [onUploadingChange],
+  );
+
+  const setUploading = useCallback(
+    (key: "display" | "main" | "sub", value: boolean) => {
+      setSlotUploading((prev) => {
+        if (prev[key] === value) return prev;
+        const next = { ...prev, [key]: value };
+        reportUploading(next);
+        return next;
+      });
+    },
+    [reportUploading],
+  );
+
   const trackNewId = (slot: "display" | "main", id: string | null) => {
     const others = newImageIds.filter((existing) => {
       if (slot === "display" && displayImage?.id === existing) return false;
@@ -55,7 +83,7 @@ export function ProductImagesManager({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-8">
       <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-dark-gray">
         <strong>How images appear on the store:</strong>
         <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-muted">
@@ -81,6 +109,7 @@ export function ProductImagesManager({
         value={displayImage}
         onChange={onDisplayChange}
         onNewId={(id) => trackNewId("display", id)}
+        onUploadingChange={(v) => setUploading("display", v)}
         isNewUpload={displayImage ? newImageIds.includes(displayImage.id) : false}
         aspectClass="aspect-[4/3]"
       />
@@ -92,6 +121,7 @@ export function ProductImagesManager({
         value={mainImage}
         onChange={onMainChange}
         onNewId={(id) => trackNewId("main", id)}
+        onUploadingChange={(v) => setUploading("main", v)}
         isNewUpload={mainImage ? newImageIds.includes(mainImage.id) : false}
         aspectClass="aspect-square"
       />
@@ -108,6 +138,7 @@ export function ProductImagesManager({
           );
           onNewIdsChange([...slotNewIds, ...ids]);
         }}
+        onUploadingChange={(v) => setUploading("sub", v)}
       />
     </div>
   );

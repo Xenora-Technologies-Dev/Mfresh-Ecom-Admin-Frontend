@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, Plus, Upload, X, XCircle } from "lucide-react";
+import { CheckCircle2, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/input";
 import { uploadImage, deleteImage, storageUrl } from "@/lib/api/client";
-import { formatApiError } from "@/lib/utils";
+import { UploadingOverlay } from "@/components/admin/uploading-overlay";
+import { formatApiError, cn } from "@/lib/utils";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 
 interface ProductSubImagesUploaderProps {
@@ -14,6 +15,7 @@ interface ProductSubImagesUploaderProps {
   onChange: (images: UploadedImage[]) => void;
   newImageIds: string[];
   onNewIds: (ids: string[]) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 export function ProductSubImagesUploader({
@@ -21,8 +23,13 @@ export function ProductSubImagesUploader({
   onChange,
   newImageIds,
   onNewIds,
+  onUploadingChange,
 }: ProductSubImagesUploaderProps) {
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    onUploadingChange?.(loading);
+  }, [loading, onUploadingChange]);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -75,6 +82,7 @@ export function ProductSubImagesUploader({
   );
 
   const remove = async (img: UploadedImage) => {
+    if (loading) return;
     if (!confirm("Remove this sub image?")) return;
     try {
       await deleteImage(img.id);
@@ -89,7 +97,7 @@ export function ProductSubImagesUploader({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="relative space-y-3">
       <div>
         <Label>Sub Images</Label>
         <p className="text-xs text-muted">
@@ -98,15 +106,14 @@ export function ProductSubImagesUploader({
         </p>
       </div>
 
-      <label className="flex h-24 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-white hover:border-primary/40">
-        {loading ? (
-          <span className="text-xs text-muted">Uploading…</span>
-        ) : (
-          <>
-            <Upload className="mb-1 h-5 w-5 text-muted" />
-            <span className="text-xs text-muted">Add sub images</span>
-          </>
+      <label
+        className={cn(
+          "relative flex h-24 w-full flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-white",
+          loading ? "pointer-events-none" : "cursor-pointer hover:border-primary/40",
         )}
+      >
+        <Upload className="mb-1 h-5 w-5 text-muted" />
+        <span className="text-xs text-muted">Add sub images</span>
         <input
           type="file"
           accept="image/*"
@@ -119,6 +126,7 @@ export function ProductSubImagesUploader({
             e.target.value = "";
           }}
         />
+        <UploadingOverlay show={loading} />
       </label>
 
       {images.length > 0 ? (
@@ -140,17 +148,24 @@ export function ProductSubImagesUploader({
               <span className="absolute bottom-1 left-1 rounded-full bg-green-600 p-0.5 text-white">
                 <CheckCircle2 className="h-3 w-3" />
               </span>
-              <button
-                type="button"
-                onClick={() => void remove(img)}
-                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label="Remove"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              {!loading && (
+                <button
+                  type="button"
+                  onClick={() => void remove(img)}
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="Remove"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           ))}
-          <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border text-muted hover:border-primary/30">
+          <label
+            className={cn(
+              "relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border text-muted",
+              loading ? "pointer-events-none" : "cursor-pointer hover:border-primary/30",
+            )}
+          >
             <Plus className="h-5 w-5" />
             <span className="text-[10px]">Add</span>
             <input
@@ -158,6 +173,7 @@ export function ProductSubImagesUploader({
               accept="image/*"
               multiple
               className="hidden"
+              disabled={loading}
               onChange={(e) => {
                 const files = e.target.files;
                 if (files?.length) void handleFiles(files);

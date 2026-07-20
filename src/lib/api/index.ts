@@ -147,6 +147,9 @@ export const leadsApi = {
   remove: (id: string) => api(`/leads/${id}`, { method: "DELETE" }),
 };
 
+export { ordersApi } from "./orders";
+export type { Order, OrderKind, OrderStatus, OrderItem, OrderListParams } from "./orders";
+
 export const backupApi = {
   list: () => api<{ filename: string; createdAt: string }[]>("/backup"),
   create: () => api("/backup/create", { method: "POST" }),
