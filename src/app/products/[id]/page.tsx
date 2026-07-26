@@ -14,12 +14,7 @@ import { ProductSpecsForm } from "@/components/admin/product-specs-form";
 import { CountrySelect } from "@/components/admin/country-select";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 import { useUploadGuard } from "@/hooks/use-upload-guard";
-import {
-  productsApi,
-  categoriesApi,
-  subCategoriesApi,
-  suppliersApi,
-} from "@/lib/api";
+import { productsApi, categoriesApi } from "@/lib/api";
 import { storageUrl } from "@/lib/api/client";
 import { formatApiError } from "@/lib/utils";
 
@@ -64,14 +59,13 @@ function buildFormFromProduct(p: Record<string, unknown>) {
   return {
     name: p.name ?? "",
     description: p.description ?? "",
-    price: p.price ?? "",
+    minPrice: p.minPrice ?? p.price ?? "",
+    maxPrice: p.maxPrice ?? p.price ?? "",
     currency: p.currency ?? "USD",
     moq: p.moq ?? "",
-    moqUnit: p.moqUnit ?? "kg",
+    unit: p.unit ?? p.moqUnit ?? "kg",
     country: p.country ?? "",
     categoryId: p.categoryId ?? "",
-    subCategoryId: p.subCategoryId ?? "",
-    supplierId: p.supplierId ?? "",
     featured: Boolean(p.featured),
     popular: Boolean(p.popular),
     isNew: Boolean(p.isNew),
@@ -90,13 +84,13 @@ export default function ProductFormPage() {
 
   const [form, setForm] = useState<Record<string, unknown>>({
     currency: "USD",
+    unit: "kg",
     isActive: true,
     soldOut: false,
     specifications: {},
   });
   const [displayImage, setDisplayImage] = useState<UploadedImage | null>(null);
-  const [mainImage, setMainImage] = useState<UploadedImage | null>(null);
-  const [subImages, setSubImages] = useState<UploadedImage[]>([]);
+  const [additionalImages, setAdditionalImages] = useState<UploadedImage[]>([]);
   const [newImageIds, setNewImageIds] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const { requestClose } = useUploadGuard(imageUploading);
@@ -136,12 +130,10 @@ export default function ProductFormPage() {
       })),
     );
     setDisplayImage(split.display);
-    setMainImage(split.main);
-    setSubImages(split.subs);
+    setAdditionalImages(split.additional);
     setNewImageIds([]);
   }, [product, productId]);
 
-  // When navigating to a different product id, allow re-hydration
   useEffect(() => {
     return () => {
       hydratedId.current = null;
@@ -152,34 +144,44 @@ export default function ProductFormPage() {
     queryKey: ["categories-all"],
     queryFn: () => categoriesApi.list({ limit: 100 }),
   });
-  const { data: subCategories } = useQuery({
-    queryKey: ["sub-categories-all"],
-    queryFn: () => subCategoriesApi.list({ limit: 100 }),
-  });
-  const { data: suppliers } = useQuery({
-    queryKey: ["suppliers-all"],
-    queryFn: () => suppliersApi.list({ limit: 100 }),
-  });
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!form.name || !form.price || !form.moq || !form.categoryId || !form.supplierId) {
+      if (
+        !form.name ||
+        form.minPrice === "" ||
+        form.minPrice == null ||
+        form.maxPrice === "" ||
+        form.maxPrice == null ||
+        !form.unit ||
+        !form.moq ||
+        !form.categoryId
+      ) {
         throw new Error(
-          "Please fill in all required fields: name, price, MOQ, category, and supplier.",
+          "Please fill in all required fields: name, min price, max price, unit, MOQ, and category.",
         );
+      }
+
+      const minPrice = Number(form.minPrice);
+      const maxPrice = Number(form.maxPrice);
+      if (Number.isNaN(minPrice) || Number.isNaN(maxPrice)) {
+        throw new Error("Min and max price must be valid numbers.");
+      }
+      if (minPrice > maxPrice) {
+        throw new Error("Min price cannot be greater than max price.");
       }
 
       const payload: Record<string, unknown> = {
         name: form.name,
         description: form.description || null,
-        price: Number(form.price),
+        minPrice,
+        maxPrice,
         currency: form.currency || "USD",
         moq: Number(form.moq),
-        moqUnit: form.moqUnit || "kg",
+        unit: String(form.unit).trim() || "kg",
         country: form.country || null,
         categoryId: form.categoryId,
-        subCategoryId: form.subCategoryId || null,
-        supplierId: form.supplierId,
+        supplierId: null,
         featured: Boolean(form.featured),
         popular: Boolean(form.popular),
         isNew: Boolean(form.isNew),
@@ -198,10 +200,6 @@ export default function ProductFormPage() {
     },
     onError: (err) => toast.error(formatApiError(err)),
   });
-
-  const filteredSubs = subCategories?.data.filter(
-    (s) => s.categoryId === form.categoryId,
-  );
 
   if (!isNew && productLoading) {
     return (
@@ -256,31 +254,61 @@ export default function ProductFormPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Price (USD) *</Label>
+            <Label>Min Price (USD) *</Label>
             <Input
               type="number"
-              value={String(form.price ?? "")}
+              min={0}
+              step="0.01"
+              value={String(form.minPrice ?? "")}
               onChange={(e) =>
-                setForm({ ...form, price: Number(e.target.value) })
+                setForm({
+                  ...form,
+                  minPrice: e.target.value === "" ? "" : Number(e.target.value),
+                })
               }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Max Price (USD) *</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={String(form.maxPrice ?? "")}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  maxPrice: e.target.value === "" ? "" : Number(e.target.value),
+                })
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Unit *</Label>
+            <Input
+              placeholder="e.g. kg, box, carton"
+              value={String(form.unit ?? "")}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
             <Label>MOQ *</Label>
             <Input
               type="number"
+              min={1}
               value={String(form.moq ?? "")}
               onChange={(e) =>
-                setForm({ ...form, moq: Number(e.target.value) })
+                setForm({
+                  ...form,
+                  moq: e.target.value === "" ? "" : Number(e.target.value),
+                })
               }
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label>MOQ Unit</Label>
-            <Input
-              value={String(form.moqUnit ?? "kg")}
-              onChange={(e) => setForm({ ...form, moqUnit: e.target.value })}
-            />
+            {form.unit ? (
+              <p className="text-xs text-muted">
+                Minimum order quantity in {String(form.unit)}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <Label>Country</Label>
@@ -294,7 +322,7 @@ export default function ProductFormPage() {
             <select
               value={String(form.categoryId ?? "")}
               onChange={(e) =>
-                setForm({ ...form, categoryId: e.target.value, subCategoryId: "" })
+                setForm({ ...form, categoryId: e.target.value })
               }
               className="flex h-10 w-full rounded-lg border border-border px-3 text-sm"
             >
@@ -302,43 +330,6 @@ export default function ProductFormPage() {
               {categories?.data.map((c) => (
                 <option key={c.id as string} value={c.id as string}>
                   {c.name as string}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sub Category (optional)</Label>
-            <select
-              value={String(form.subCategoryId ?? "")}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  subCategoryId: e.target.value || undefined,
-                })
-              }
-              className="flex h-10 w-full rounded-lg border border-border px-3 text-sm"
-            >
-              <option value="">Select...</option>
-              {filteredSubs?.map((s) => (
-                <option key={s.id as string} value={s.id as string}>
-                  {s.name as string}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Supplier *</Label>
-            <select
-              value={String(form.supplierId ?? "")}
-              onChange={(e) =>
-                setForm({ ...form, supplierId: e.target.value })
-              }
-              className="flex h-10 w-full rounded-lg border border-border px-3 text-sm"
-            >
-              <option value="">Select...</option>
-              {suppliers?.data.map((s) => (
-                <option key={s.id as string} value={s.id as string}>
-                  {s.name as string}
                 </option>
               ))}
             </select>
@@ -396,12 +387,10 @@ export default function ProductFormPage() {
         <h3 className="mb-4 text-lg font-semibold">Product Images</h3>
         <ProductImagesManager
           displayImage={displayImage}
-          mainImage={mainImage}
-          subImages={subImages}
+          additionalImages={additionalImages}
           newImageIds={newImageIds}
           onDisplayChange={setDisplayImage}
-          onMainChange={setMainImage}
-          onSubChange={setSubImages}
+          onAdditionalChange={setAdditionalImages}
           onNewIdsChange={setNewImageIds}
           onUploadingChange={setImageUploading}
         />

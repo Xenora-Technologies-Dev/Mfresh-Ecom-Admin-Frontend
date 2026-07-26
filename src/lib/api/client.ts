@@ -76,7 +76,7 @@ export function qs(params: ListParams = {}) {
 
 export async function uploadImage(
   file: File,
-  type: "MAIN" | "SUB" | "DISPLAY",
+  type: "DISPLAY" | "ADDITIONAL",
   preview = true,
 ) {
   const form = new FormData();

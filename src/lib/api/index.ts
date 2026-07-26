@@ -21,17 +21,6 @@ export const categoriesApi = {
     api<string>(`/categories/export${qs(p)}`),
 };
 
-export const subCategoriesApi = {
-  list: (p: ListParams) =>
-    api<PaginatedResponse<Record<string, unknown>>>(`/sub-categories${qs(p)}`),
-  create: (data: Record<string, unknown>) =>
-    api("/sub-categories", { method: "POST", body: JSON.stringify(data) }),
-  update: (id: string, data: Record<string, unknown>) =>
-    api(`/sub-categories/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  remove: (id: string) => api(`/sub-categories/${id}`, { method: "DELETE" }),
-  export: (p: ListParams) => api<string>(`/sub-categories/export${qs(p)}`),
-};
-
 export const productsApi = {
   list: (p: ListParams) =>
     api<PaginatedResponse<Record<string, unknown>>>(`/products${qs(p)}`),

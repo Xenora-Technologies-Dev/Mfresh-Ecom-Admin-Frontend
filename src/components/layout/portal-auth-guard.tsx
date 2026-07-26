@@ -18,7 +18,6 @@ const AUTH_SHELL_BYPASS = [
 
 const ADMIN_ONLY_PREFIXES = [
   "/categories",
-  "/sub-categories",
   "/suppliers",
   "/customers",
   "/users",

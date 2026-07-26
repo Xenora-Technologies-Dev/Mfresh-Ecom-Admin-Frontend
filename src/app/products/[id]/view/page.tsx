@@ -92,15 +92,26 @@ export default function ProductViewPage() {
         <div className="space-y-4 rounded-xl border border-border bg-white p-6">
           <dl className="grid gap-3 text-sm">
             <div>
-              <dt className="text-muted">Price</dt>
+              <dt className="text-muted">Min Price</dt>
               <dd className="font-semibold">
-                {formatPriceUsd(Number(product.price))}
+                {formatPriceUsd(Number(product.minPrice ?? product.price))}
+                /{String(product.unit ?? product.moqUnit ?? "")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">Max Price</dt>
+              <dd className="font-semibold">
+                {formatPriceUsd(
+                  Number(product.maxPrice ?? product.minPrice ?? product.price),
+                )}
+                /{String(product.unit ?? product.moqUnit ?? "")}
               </dd>
             </div>
             <div>
               <dt className="text-muted">MOQ</dt>
               <dd>
-                {product.moq as number} {product.moqUnit as string}
+                {product.moq as number}/
+                {String(product.unit ?? product.moqUnit ?? "")}
               </dd>
             </div>
             <div>
@@ -111,12 +122,6 @@ export default function ProductViewPage() {
               <dt className="text-muted">Category</dt>
               <dd>
                 {(product.category as { name?: string })?.name ?? "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Supplier</dt>
-              <dd>
-                {(product.supplier as { name?: string })?.name ?? "—"}
               </dd>
             </div>
             <div className="sm:col-span-2">

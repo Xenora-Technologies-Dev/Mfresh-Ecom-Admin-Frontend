@@ -10,7 +10,7 @@ import { UploadingOverlay } from "@/components/admin/uploading-overlay";
 import { formatApiError, cn } from "@/lib/utils";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 
-type ImageSlotType = "DISPLAY" | "MAIN" | "SUB";
+type ImageSlotType = "DISPLAY" | "ADDITIONAL";
 
 interface ProductSlotUploaderProps {
   label: string;

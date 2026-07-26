@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderTree,
-  Layers,
   Package,
   Truck,
   Users,
@@ -48,7 +47,6 @@ const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin"] },
   { href: "/orders", label: "Orders", icon: ClipboardList, roles: ["admin"] },
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
-  { href: "/sub-categories", label: "Sub Categories", icon: Layers, roles: ["admin"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin"] },
   {
     href: "/messages",

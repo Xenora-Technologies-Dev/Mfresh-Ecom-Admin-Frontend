@@ -20,7 +20,7 @@ export interface UploadedImage {
 }
 
 interface ImageUploaderProps {
-  type?: "MAIN" | "SUB" | "DISPLAY";
+  type?: "DISPLAY" | "ADDITIONAL";
   label?: string;
   onUploaded: (image: UploadedImage) => void;
   className?: string;

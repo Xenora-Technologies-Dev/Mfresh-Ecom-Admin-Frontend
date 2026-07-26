@@ -20,17 +20,28 @@ const columns: ColumnDef<Record<string, unknown>, unknown>[] = [
       (row.original.category as { name?: string })?.name ?? "—",
   },
   {
-    id: "supplier",
-    header: "Supplier",
-    cell: ({ row }) =>
-      (row.original.supplier as { name?: string })?.name ?? "—",
+    id: "price",
+    header: "Price",
+    cell: ({ row }) => {
+      const min = Number(row.original.minPrice ?? row.original.price ?? 0);
+      const max = Number(row.original.maxPrice ?? min);
+      const unit = String(row.original.unit ?? row.original.moqUnit ?? "");
+      const range =
+        min === max
+          ? formatPriceUsd(min)
+          : `${formatPriceUsd(min)} – ${formatPriceUsd(max)}`;
+      return unit ? `${range}/${unit}` : range;
+    },
   },
   {
-    accessorKey: "price",
-    header: "Price",
-    cell: ({ getValue }) => formatPriceUsd(Number(getValue())),
+    id: "moq",
+    header: "MOQ",
+    cell: ({ row }) => {
+      const moq = row.original.moq as number;
+      const unit = String(row.original.unit ?? row.original.moqUnit ?? "");
+      return unit ? `${moq}/${unit}` : String(moq);
+    },
   },
-  { accessorKey: "moq", header: "MOQ" },
   {
     id: "status",
     header: "Status",

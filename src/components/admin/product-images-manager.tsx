@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { UploadedImage } from "@/components/admin/multi-image-uploader";
 import { ProductSlotUploader } from "@/components/admin/product-slot-uploader";
-import { ProductSubImagesUploader } from "@/components/admin/product-sub-images-uploader";
+import { ProductAdditionalImagesUploader } from "@/components/admin/product-additional-images-uploader";
+import { deleteImage } from "@/lib/api/client";
 
 function toUploadedImage(img: {
   id: string;
@@ -27,59 +28,65 @@ function toUploadedImage(img: {
 
 interface ProductImagesManagerProps {
   displayImage: UploadedImage | null;
-  mainImage: UploadedImage | null;
-  subImages: UploadedImage[];
+  additionalImages: UploadedImage[];
   newImageIds: string[];
   onDisplayChange: (img: UploadedImage | null) => void;
-  onMainChange: (img: UploadedImage | null) => void;
-  onSubChange: (imgs: UploadedImage[]) => void;
+  onAdditionalChange: (imgs: UploadedImage[]) => void;
   onNewIdsChange: (ids: string[]) => void;
   onUploadingChange?: (uploading: boolean) => void;
 }
 
 export function ProductImagesManager({
   displayImage,
-  mainImage,
-  subImages,
+  additionalImages,
   newImageIds,
   onDisplayChange,
-  onMainChange,
-  onSubChange,
+  onAdditionalChange,
   onNewIdsChange,
   onUploadingChange,
 }: ProductImagesManagerProps) {
   const [slotUploading, setSlotUploading] = useState({
     display: false,
-    main: false,
-    sub: false,
+    additional: false,
   });
 
-  const reportUploading = useCallback(
-    (next: { display: boolean; main: boolean; sub: boolean }) => {
-      onUploadingChange?.(next.display || next.main || next.sub);
-    },
-    [onUploadingChange],
-  );
+  useEffect(() => {
+    onUploadingChange?.(slotUploading.display || slotUploading.additional);
+  }, [slotUploading, onUploadingChange]);
 
   const setUploading = useCallback(
-    (key: "display" | "main" | "sub", value: boolean) => {
+    (key: "display" | "additional", value: boolean) => {
       setSlotUploading((prev) => {
         if (prev[key] === value) return prev;
-        const next = { ...prev, [key]: value };
-        reportUploading(next);
-        return next;
+        return { ...prev, [key]: value };
       });
     },
-    [reportUploading],
+    [],
   );
 
-  const trackNewId = (slot: "display" | "main", id: string | null) => {
-    const others = newImageIds.filter((existing) => {
-      if (slot === "display" && displayImage?.id === existing) return false;
-      if (slot === "main" && mainImage?.id === existing) return false;
-      return true;
-    });
+  const trackDisplayId = (id: string | null) => {
+    const others = newImageIds.filter((existing) => existing !== displayImage?.id);
     onNewIdsChange(id ? [...others, id] : others);
+  };
+
+  const handleDisplayChange = (img: UploadedImage | null) => {
+    if (!img && additionalImages.length > 0) {
+      const toRemove = [...additionalImages];
+      onAdditionalChange([]);
+      onNewIdsChange(
+        newImageIds.filter((id) => !toRemove.some((a) => a.id === id)),
+      );
+      void (async () => {
+        for (const extra of toRemove) {
+          try {
+            await deleteImage(extra.id);
+          } catch {
+            /* ignore */
+          }
+        }
+      })();
+    }
+    onDisplayChange(img);
   };
 
   return (
@@ -89,56 +96,40 @@ export function ProductImagesManager({
         <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-muted">
           <li>
             <strong>Display image</strong> — shown on product cards in listings
-            and homepage sliders.
+            and as the large image on the product detail page (1 image only).
           </li>
           <li>
-            <strong>Main image</strong> — large hero image on the product
-            detail page.
-          </li>
-          <li>
-            <strong>Sub images</strong> — smaller gallery thumbnails; clicking
-            one swaps the main view.
+            <strong>Additional images</strong> — gallery images on the product
+            detail page. Requires a display image first; upload as many as needed.
           </li>
         </ul>
       </div>
 
       <ProductSlotUploader
         label="Display Image"
-        hint="Card image for product listings (recommended 4:3 ratio)."
+        hint="Required for listings and the main product view (recommended 4:3 ratio)."
         imageType="DISPLAY"
         value={displayImage}
-        onChange={onDisplayChange}
-        onNewId={(id) => trackNewId("display", id)}
+        onChange={handleDisplayChange}
+        onNewId={trackDisplayId}
         onUploadingChange={(v) => setUploading("display", v)}
         isNewUpload={displayImage ? newImageIds.includes(displayImage.id) : false}
         aspectClass="aspect-[4/3]"
       />
 
-      <ProductSlotUploader
-        label="Main Image"
-        hint="Large image on the product detail page."
-        imageType="MAIN"
-        value={mainImage}
-        onChange={onMainChange}
-        onNewId={(id) => trackNewId("main", id)}
-        onUploadingChange={(v) => setUploading("main", v)}
-        isNewUpload={mainImage ? newImageIds.includes(mainImage.id) : false}
-        aspectClass="aspect-square"
-      />
-
-      <ProductSubImagesUploader
-        images={subImages}
-        onChange={onSubChange}
+      <ProductAdditionalImagesUploader
+        images={additionalImages}
+        onChange={onAdditionalChange}
+        disabled={!displayImage}
         newImageIds={newImageIds.filter((id) =>
-          subImages.some((s) => s.id === id),
+          additionalImages.some((s) => s.id === id),
         )}
         onNewIds={(ids) => {
-          const slotNewIds = newImageIds.filter(
-            (id) => id === displayImage?.id || id === mainImage?.id,
-          );
-          onNewIdsChange([...slotNewIds, ...ids]);
+          const displayIds = displayImage?.id ? [displayImage.id] : [];
+          const keptDisplay = newImageIds.filter((id) => displayIds.includes(id));
+          onNewIdsChange([...keptDisplay, ...ids]);
         }}
-        onUploadingChange={(v) => setUploading("sub", v)}
+        onUploadingChange={(v) => setUploading("additional", v)}
       />
     </div>
   );
@@ -155,9 +146,12 @@ export function splitProductImages(
   }[],
 ) {
   const list = imageUrls.map(toUploadedImage);
-  return {
-    display: list.find((i) => i.type === "DISPLAY") ?? null,
-    main: list.find((i) => i.type === "MAIN") ?? null,
-    subs: list.filter((i) => i.type === "SUB"),
-  };
+  const display =
+    list.find((i) => i.type === "DISPLAY") ??
+    list.find((i) => i.type === "MAIN") ??
+    null;
+  const additional = list.filter(
+    (i) => i.type === "ADDITIONAL" || i.type === "SUB",
+  );
+  return { display, additional };
 }
