@@ -46,26 +46,31 @@ export function ProductAdditionalImagesUploader({
       const addedIds: string[] = [];
       let failures = 0;
 
-      for (const file of list) {
-        if (!file.type.startsWith("image/")) {
-          failures++;
-          continue;
-        }
-        try {
+      const results = await Promise.allSettled(
+        list.map(async (file) => {
+          if (!file.type.startsWith("image/")) {
+            throw new Error("invalid-type");
+          }
           const result = await uploadImage(file, "ADDITIONAL", true);
-          added.push({
+          return {
             id: result.id,
-            type: "ADDITIONAL",
+            type: "ADDITIONAL" as const,
             urls: {
               display: storageUrl(result.urls.display),
               thumbnail: storageUrl(result.urls.thumbnail),
               medium: storageUrl(result.urls.medium),
               large: storageUrl(result.urls.large),
             },
-            uploadStatus: "success",
-          });
-          addedIds.push(result.id);
-        } catch {
+            uploadStatus: "success" as const,
+          };
+        }),
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          added.push(result.value);
+          addedIds.push(result.value.id);
+        } else {
           failures++;
         }
       }

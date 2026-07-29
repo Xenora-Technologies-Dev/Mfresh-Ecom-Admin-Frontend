@@ -213,8 +213,10 @@ export default function ProductFormPage() {
         isActive: form.isActive !== false,
         soldOut: Boolean(form.soldOut),
         specifications: specs,
-        imageIds: newImageIds,
       };
+      if (newImageIds.length) {
+        payload.imageIds = newImageIds;
+      }
 
       if (isNew) return productsApi.create(payload);
       return productsApi.update(productId!, payload);

@@ -50,10 +50,10 @@ export function MultiImageUploader({
       const addedIds: string[] = [];
       let hadError = false;
 
-      for (const file of list) {
-        try {
+      const results = await Promise.allSettled(
+        list.map(async (file) => {
           const result = await uploadImage(file, "DISPLAY", true);
-          const img: UploadedImage = {
+          return {
             id: result.id,
             type: result.type,
             urls: {
@@ -62,27 +62,21 @@ export function MultiImageUploader({
               medium: storageUrl(result.urls.medium),
               large: storageUrl(result.urls.large),
             },
-            uploadStatus: "success",
+            uploadStatus: "success" as const,
           };
-          added.push(img);
-          addedIds.push(result.id);
-        } catch {
+        }),
+      );
+
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          added.push(result.value);
+          addedIds.push(result.value.id);
+        } else {
           hadError = true;
-          added.push({
-            id: `failed-${file.name}-${Date.now()}`,
-            type: "DISPLAY",
-            urls: {
-              display: "",
-              thumbnail: "",
-              medium: "",
-              large: "",
-            },
-            uploadStatus: "error",
-          });
         }
       }
 
-      onChange([...images, ...added.filter((i) => i.uploadStatus === "success")]);
+      onChange([...images, ...added]);
       if (addedIds.length) onNewIds?.([...newImageIds, ...addedIds]);
       if (hadError) {
         setError("Some images could not be uploaded. Please try again.");

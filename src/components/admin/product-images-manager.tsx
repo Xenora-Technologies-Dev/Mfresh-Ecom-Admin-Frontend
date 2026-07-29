@@ -77,13 +77,15 @@ export function ProductImagesManager({
         newImageIds.filter((id) => !toRemove.some((a) => a.id === id)),
       );
       void (async () => {
-        for (const extra of toRemove) {
-          try {
-            await deleteImage(extra.id);
-          } catch {
-            /* ignore */
-          }
-        }
+        await Promise.all(
+          toRemove.map(async (extra) => {
+            try {
+              await deleteImage(extra.id);
+            } catch {
+              /* ignore */
+            }
+          }),
+        );
       })();
     }
     onDisplayChange(img);
