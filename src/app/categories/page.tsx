@@ -217,7 +217,7 @@ export default function CategoriesPage() {
                 value={form.image as string | undefined}
                 imageUrl={form.imageUrl as string | undefined}
                 categoryId={editing?.id as string | undefined}
-                onChange={(path) => setForm({ ...form, image: path })}
+                onChange={(path, url) => setForm({ ...form, image: path, imageUrl: url || undefined })}
                 onUploadingChange={setImageUploading}
               />
               <div className="space-y-1.5">

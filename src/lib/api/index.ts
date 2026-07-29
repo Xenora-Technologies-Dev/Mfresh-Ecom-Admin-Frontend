@@ -31,6 +31,10 @@ export const productsApi = {
     api(`/products/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   remove: (id: string) => api(`/products/${id}`, { method: "DELETE" }),
   export: (p: ListParams) => api<string>(`/products/export${qs(p)}`),
+  checkName: (name: string, excludeId?: string) =>
+    api<{ exists: boolean; productId?: string }>(
+      `/products/check-name?name=${encodeURIComponent(name)}${excludeId ? `&excludeId=${excludeId}` : ""}`,
+    ),
 };
 
 export const suppliersApi = {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -94,6 +95,30 @@ export default function ProductFormPage() {
   const [newImageIds, setNewImageIds] = useState<string[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const { requestClose } = useUploadGuard(imageUploading);
+
+  const [nameStatus, setNameStatus] = useState<"idle" | "checking" | "new" | "exists">("idle");
+  const nameCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const checkProductName = useCallback(
+    (name: string) => {
+      if (nameCheckTimer.current) clearTimeout(nameCheckTimer.current);
+      const trimmed = name.trim();
+      if (!trimmed) {
+        setNameStatus("idle");
+        return;
+      }
+      setNameStatus("checking");
+      nameCheckTimer.current = setTimeout(async () => {
+        try {
+          const result = await productsApi.checkName(trimmed, productId ?? undefined);
+          setNameStatus(result.exists ? "exists" : "new");
+        } catch {
+          setNameStatus("idle");
+        }
+      }, 400);
+    },
+    [productId],
+  );
 
   const specs =
     (form.specifications as Record<string, string> | null | undefined) ?? {};
@@ -239,10 +264,30 @@ export default function ProductFormPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Name *</Label>
-            <Input
-              value={String(form.name ?? "")}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+            <div className="relative">
+              <Input
+                value={String(form.name ?? "")}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  checkProductName(e.target.value);
+                }}
+              />
+              {nameStatus === "new" && (
+                <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-xs font-medium text-green-600">
+                  <CheckCircle2 className="h-4 w-4" /> New item
+                </span>
+              )}
+              {nameStatus === "exists" && (
+                <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-xs font-medium text-red-600">
+                  <XCircle className="h-4 w-4" /> Item already exists
+                </span>
+              )}
+              {nameStatus === "checking" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">
+                  Checking…
+                </span>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label>Description</Label>

@@ -47,7 +47,7 @@ export function CategoryImageUploader({
       setUploadStatus("idle");
       try {
         const result = await uploadCategoryImage(file, categoryId);
-        const url = storageUrl(result.url);
+        const url = `${storageUrl(result.url)}?t=${Date.now()}`;
         setPreview(url);
         onChange(result.path, url);
         setUploadStatus("success");
