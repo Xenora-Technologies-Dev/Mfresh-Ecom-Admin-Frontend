@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, StatusBadge } from "@/components/admin/data-table";
@@ -39,7 +40,7 @@ const columns: ColumnDef<Record<string, unknown>, unknown>[] = [
     cell: ({ row }) => {
       const moq = row.original.moq as number;
       const unit = String(row.original.unit ?? row.original.moqUnit ?? "");
-      return unit ? `${moq}/${unit}` : String(moq);
+      return unit ? `${moq} ${unit}` : String(moq);
     },
   },
   {
@@ -61,12 +62,31 @@ const columns: ColumnDef<Record<string, unknown>, unknown>[] = [
   },
 ];
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const qc = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const page = Math.max(1, Number(searchParams.get("page") || "1") || 1);
+  const search = searchParams.get("search") || "";
+  const sortBy = searchParams.get("sortBy") || "createdAt";
+  const sortOrder = (searchParams.get("sortOrder") === "asc" ? "asc" : "desc") as
+    | "asc"
+    | "desc";
+
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(patch)) {
+        if (value == null || value === "") next.delete(key);
+        else next.set(key, value);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    },
+    [pathname, router, searchParams],
+  );
 
   const params = { page, limit: 10, search, sortBy, sortOrder, isActive: undefined };
   const { data, isLoading } = useQuery({
@@ -83,6 +103,8 @@ export default function ProductsPage() {
     onError: (err) => toast.error(formatApiError(err)),
   });
 
+  const returnQs = page > 1 ? `?returnPage=${page}` : "";
+
   return (
     <DataTable
       title="Products"
@@ -94,14 +116,14 @@ export default function ProductsPage() {
           cell: ({ row }) => (
             <div className="flex items-center gap-2">
               <Link
-                href={`/products/${row.original.id}/view`}
+                href={`/products/${row.original.id}/view${returnQs}`}
                 className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
               >
                 <Eye className="h-3.5 w-3.5" />
                 View
               </Link>
               <Link
-                href={`/products/${row.original.id}`}
+                href={`/products/${row.original.id}${returnQs}`}
                 className="text-sm font-medium text-muted hover:text-primary hover:underline"
               >
                 Edit
@@ -129,14 +151,17 @@ export default function ProductsPage() {
       sortBy={sortBy}
       sortOrder={sortOrder}
       isLoading={isLoading}
-      onPageChange={setPage}
+      onPageChange={(p) =>
+        updateParams({ page: p <= 1 ? null : String(p) })
+      }
       onSearchChange={(s) => {
-        setSearch(s);
-        setPage(1);
+        updateParams({ search: s || null, page: null });
       }}
       onSortChange={(sb, so) => {
-        setSortBy(sb);
-        setSortOrder(so);
+        updateParams({
+          sortBy: sb === "createdAt" ? null : sb,
+          sortOrder: so === "desc" ? null : so,
+        });
       }}
       onExport={async () => {
         const csv = await productsApi.export(params);
@@ -151,5 +176,17 @@ export default function ProductsPage() {
         </Button>
       }
     />
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-16 text-center text-sm text-muted">Loading products…</div>
+      }
+    >
+      <ProductsPageContent />
+    </Suspense>
   );
 }

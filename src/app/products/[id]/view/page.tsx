@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,11 +11,23 @@ import { productsApi } from "@/lib/api";
 import { storageUrl } from "@/lib/api/client";
 import { formatApiError, formatPriceUsd } from "@/lib/utils";
 
-export default function ProductViewPage() {
+function productsListHref(returnPage: string | null) {
+  const page = Number(returnPage);
+  if (Number.isFinite(page) && page > 1) return `/products?page=${page}`;
+  return "/products";
+}
+
+function ProductViewPageContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const qc = useQueryClient();
   const productId = params.id as string;
+  const listHref = productsListHref(searchParams.get("returnPage"));
+  const editHref =
+    listHref === "/products"
+      ? `/products/${productId}`
+      : `/products/${productId}?returnPage=${searchParams.get("returnPage")}`;
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", productId],
@@ -57,9 +70,9 @@ export default function ProductViewPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href={`/products/${productId}`}>Edit</Link>
+            <Link href={editHref}>Edit</Link>
           </Button>
-          <Button variant="outline" onClick={() => router.push("/products")}>
+          <Button variant="outline" onClick={() => router.push(listHref)}>
             Back
           </Button>
         </div>
@@ -110,7 +123,7 @@ export default function ProductViewPage() {
             <div>
               <dt className="text-muted">MOQ</dt>
               <dd>
-                {product.moq as number}/
+                {product.moq as number}{" "}
                 {String(product.unit ?? product.moqUnit ?? "")}
               </dd>
             </div>
@@ -170,5 +183,13 @@ export default function ProductViewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProductViewPage() {
+  return (
+    <Suspense fallback={<p className="p-8 text-muted">Loading product...</p>}>
+      <ProductViewPageContent />
+    </Suspense>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -76,11 +76,38 @@ function buildFormFromProduct(p: Record<string, unknown>) {
   };
 }
 
+function productsListHref(returnPage: string | null, isNew: boolean) {
+  // New products sort to the top (createdAt desc) → page 1.
+  // Edits return to the page the user came from.
+  if (isNew) return "/products";
+  const page = Number(returnPage);
+  if (Number.isFinite(page) && page > 1) return `/products?page=${page}`;
+  return "/products";
+}
+
 export default function ProductFormPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted">
+          Loading…
+        </div>
+      }
+    >
+      <ProductFormPageContent />
+    </Suspense>
+  );
+}
+
+function ProductFormPageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const qc = useQueryClient();
   const isNew = params.id === "new";
   const productId = isNew ? null : (params.id as string);
+  const returnPage = searchParams.get("returnPage");
+  const listHref = productsListHref(returnPage, isNew);
   const hydratedId = useRef<string | null>(null);
 
   const [form, setForm] = useState<Record<string, unknown>>({
@@ -222,8 +249,12 @@ export default function ProductFormPage() {
       return productsApi.update(productId!, payload);
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      if (productId) {
+        qc.invalidateQueries({ queryKey: ["product", productId] });
+      }
       toast.success(isNew ? "Product created successfully" : "Product saved successfully");
-      router.push("/products");
+      router.push(listHref);
     },
     onError: (err) => toast.error(formatApiError(err)),
   });
@@ -242,7 +273,7 @@ export default function ProductFormPage() {
         <p className="text-sm text-red-600">
           Could not load product: {formatApiError(productErr)}
         </p>
-        <Button variant="outline" onClick={() => router.push("/products")}>
+        <Button variant="outline" onClick={() => router.push(listHref)}>
           Back to products
         </Button>
       </div>
@@ -463,7 +494,7 @@ export default function ProductFormPage() {
           variant="outline"
           onClick={() => {
             if (!requestClose()) return;
-            router.back();
+            router.push(listHref);
           }}
         >
           Cancel
