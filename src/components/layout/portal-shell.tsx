@@ -45,7 +45,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin"] },
-  { href: "/orders", label: "Orders", icon: ClipboardList, roles: ["admin"] },
+  { href: "/orders", label: "Enquiries", icon: ClipboardList, roles: ["admin"] },
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin"] },
   {

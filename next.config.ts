@@ -1,16 +1,21 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const r2Host = process.env.NEXT_PUBLIC_STORAGE_PUBLIC_URL
+  ? new URL(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_URL).hostname
+  : null;
+
 const nextConfig: NextConfig = {
-  // Parent frontend/ also has a package-lock.json. Pin to the parent so Turbopack
-  // stops warning; pointing at Admin alone breaks the React Client Manifest.
   turbopack: {
     root: path.join(__dirname, ".."),
   },
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "4005" },
-      { protocol: "https", hostname: "**" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      ...(r2Host
+        ? [{ protocol: "https" as const, hostname: r2Host }]
+        : [{ protocol: "https" as const, hostname: "*.r2.dev" }]),
     ],
     unoptimized: process.env.NODE_ENV === "development",
   },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ClerkProvider, RedirectToTasks } from "@clerk/nextjs";
+import { ApiAuthProvider } from "@/providers/api-auth-provider";
 import { PortalShell } from "@/components/layout/portal-shell";
 import { PortalAuthGuard } from "@/components/layout/portal-auth-guard";
 import { QueryProvider } from "@/providers/query-provider";
@@ -54,6 +55,7 @@ export default function RootLayout({
             "choose-organization": "/tasks/choose-organization",
           }}
         >
+          <ApiAuthProvider>
           <RedirectToTasks />
           <QueryProvider>
             <ToastProvider />
@@ -71,6 +73,7 @@ export default function RootLayout({
               </PortalShell>
             </PortalAuthGuard>
           </QueryProvider>
+        </ApiAuthProvider>
         </ClerkProvider>
       </body>
     </html>

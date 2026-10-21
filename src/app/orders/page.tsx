@@ -14,7 +14,14 @@ import { toast } from "sonner";
 function statusClass(status: string) {
   switch (status) {
     case "PLACED":
+    case "NEW":
       return "bg-sky-100 text-sky-800";
+    case "CONTACTED":
+      return "bg-amber-100 text-amber-800";
+    case "QUOTED":
+      return "bg-violet-100 text-violet-800";
+    case "CLOSED":
+      return "bg-gray-100 text-gray-700";
     case "UNDER_VERIFICATION":
       return "bg-amber-100 text-amber-800";
     case "VERIFIED":
@@ -29,7 +36,7 @@ function statusClass(status: string) {
 }
 
 function kindLabel(kind: OrderKind) {
-  return kind === "SELLER_LISTING" ? "Seller listing" : "Buyer order";
+  return kind === "SELLER_LISTING" ? "Seller listing" : "Buyer enquiry";
 }
 
 function OrderDetailModal({
@@ -50,10 +57,29 @@ function OrderDetailModal({
       ordersApi.review(order.id, { status, remarks: remarks.trim() || undefined }),
     onSuccess: (updated) => {
       toast.success(
-        updated.status === "VERIFIED" ? "Listing verified" : "Listing rejected",
+        updated.status === "VERIFIED"
+          ? "Listing verified and product published"
+          : "Listing rejected",
       );
       void qc.invalidateQueries({ queryKey: ["orders"] });
       setConfirmAction(null);
+      onClose();
+    },
+    onError: (err) => toast.error(formatApiError(err)),
+  });
+
+  const [enquiryStatus, setEnquiryStatus] = useState(order.status);
+  const [adminNotes, setAdminNotes] = useState(order.adminNotes ?? "");
+
+  const statusMutation = useMutation({
+    mutationFn: () =>
+      ordersApi.updateStatus(order.id, {
+        status: enquiryStatus as "NEW" | "CONTACTED" | "QUOTED" | "CLOSED" | "CANCELLED",
+        adminNotes: adminNotes.trim() || undefined,
+      }),
+    onSuccess: () => {
+      toast.success("Enquiry updated");
+      void qc.invalidateQueries({ queryKey: ["orders"] });
       onClose();
     },
     onError: (err) => toast.error(formatApiError(err)),
@@ -132,7 +158,57 @@ function OrderDetailModal({
             </dl>
           </section>
 
+          {!isListing && (
+            <section className="rounded-xl border border-border bg-light-gray/30 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
+                Enquiry status
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="enq-status">Status</Label>
+                  <select
+                    id="enq-status"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+                    value={enquiryStatus === "PLACED" ? "NEW" : enquiryStatus}
+                    onChange={(e) => setEnquiryStatus(e.target.value as Order["status"])}
+                  >
+                    <option value="NEW">New</option>
+                    <option value="CONTACTED">Contacted</option>
+                    <option value="QUOTED">Quoted</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="enq-notes">Admin notes</Label>
+                  <textarea
+                    id="enq-notes"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+                    rows={3}
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                className="mt-3"
+                size="sm"
+                disabled={statusMutation.isPending}
+                onClick={() => statusMutation.mutate()}
+              >
+                {statusMutation.isPending ? "Saving…" : "Save enquiry status"}
+              </Button>
+            </section>
+          )}
+
+          {order.publishedProductId && (
+            <p className="text-sm text-emerald-700">
+              Published product id: {order.publishedProductId}
+            </p>
+          )}
+
           {isListing ? (
+
             <section>
               <h3 className="mb-3 text-sm font-semibold text-foreground">
                 Product submission
@@ -286,7 +362,7 @@ function OrderDetailModal({
   );
 }
 
-export default function OrdersPage() {
+export default function EnquiriesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -325,7 +401,7 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Orders</h2>
+        <h2 className="text-2xl font-bold">Enquiries</h2>
         <p className="mt-1 text-sm text-muted">
           Buyer cart orders and seller product submissions awaiting review.
         </p>

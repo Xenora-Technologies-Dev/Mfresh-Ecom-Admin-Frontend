@@ -138,6 +138,14 @@ export const leadsApi = {
   markAllRead: () =>
     api<{ updated: number }>("/leads/read-all", { method: "PATCH" }),
   remove: (id: string) => api(`/leads/${id}`, { method: "DELETE" }),
+  updateStatus: (
+    id: string,
+    data: { status: string; adminNotes?: string },
+  ) =>
+    api(`/leads/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 };
 
 export { ordersApi } from "./orders";

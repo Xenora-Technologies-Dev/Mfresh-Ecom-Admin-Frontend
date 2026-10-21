@@ -40,6 +40,8 @@ export interface Order {
   productPrice?: number | null;
   productCurrency?: string | null;
   remarks?: string | null;
+  adminNotes?: string | null;
+  publishedProductId?: string | null;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
@@ -57,6 +59,17 @@ export const ordersApi = {
   get: (id: string) => api<Order>(`/orders/${id}`),
   review: (id: string, data: { status: "VERIFIED" | "REJECTED"; remarks?: string }) =>
     api<Order>(`/orders/${id}/review`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  updateStatus: (
+    id: string,
+    data: {
+      status: "NEW" | "CONTACTED" | "QUOTED" | "CLOSED" | "CANCELLED";
+      adminNotes?: string;
+    },
+  ) =>
+    api<Order>(`/orders/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),

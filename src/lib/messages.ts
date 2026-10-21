@@ -33,6 +33,8 @@ export type LeadRecord = {
   type: string;
   contactName: string;
   email: string;
+  status?: string | null;
+  adminNotes?: string | null;
   businessName?: string | null;
   phone?: string | null;
   businessType?: string | null;

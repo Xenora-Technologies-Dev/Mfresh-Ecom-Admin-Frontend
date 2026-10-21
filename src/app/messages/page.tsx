@@ -41,6 +41,8 @@ function asLead(row: Record<string, unknown>): LeadRecord {
     country: (row.country as string) ?? null,
     subject: (row.subject as string) ?? null,
     message: (row.message as string) ?? null,
+    status: (row.status as string) ?? "NEW",
+    adminNotes: (row.adminNotes as string) ?? null,
     isRead: Boolean(row.isRead),
     readAt: (row.readAt as string) ?? null,
     createdAt: String(row.createdAt ?? ""),
@@ -122,6 +124,21 @@ export default function MessagesPage() {
     onError: (err) => toast.error(formatApiError(err)),
   });
 
+  const [statusDraft, setStatusDraft] = useState("NEW");
+
+  const statusMutation = useMutation({
+    mutationFn: (payload: { status: string; adminNotes?: string }) => {
+      if (!detail) throw new Error("No message selected");
+      return leadsApi.updateStatus(detail.id, payload);
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      void qc.invalidateQueries({ queryKey: ["messages"] });
+      void qc.invalidateQueries({ queryKey: ["message"] });
+    },
+    onError: (err) => toast.error(formatApiError(err)),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => leadsApi.remove(id),
     onSuccess: () => {
@@ -135,6 +152,7 @@ export default function MessagesPage() {
 
   const openMessage = (lead: LeadRecord) => {
     setSelectedId(lead.id);
+    setStatusDraft(String(lead.status || "NEW").toUpperCase());
     if (!lead.isRead) markReadMutation.mutate(lead.id);
   };
 
@@ -143,6 +161,10 @@ export default function MessagesPage() {
     setPage(1);
     setSearch(searchInput.trim());
   };
+
+  useEffect(() => {
+    if (detail?.status) setStatusDraft(String(detail.status).toUpperCase());
+  }, [detail?.id, detail?.status]);
 
   const payload = detail ? parseLeadPayload(detail.message) : {};
 
@@ -381,6 +403,31 @@ export default function MessagesPage() {
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-border bg-light-gray/40 p-3">
+                <div>
+                  <p className="text-xs font-medium text-muted">Enquiry status</p>
+                  <select
+                    className="mt-1 rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+                    value={statusDraft}
+                    onChange={(e) => setStatusDraft(e.target.value)}
+                  >
+                    <option value="NEW">New</option>
+                    <option value="CONTACTED">Contacted</option>
+                    <option value="QUOTED">Quoted</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate({ status: statusDraft })}
+                >
+                  {statusMutation.isPending ? "Saving…" : "Save status"}
                 </Button>
               </div>
 
