@@ -41,6 +41,8 @@ export type LeadRecord = {
   country?: string | null;
   subject?: string | null;
   message?: string | null;
+  /** Structured form data (newer leads). Older leads kept JSON in `message`. */
+  details?: Record<string, unknown> | null;
   isRead?: boolean;
   readAt?: string | null;
   createdAt: string;
@@ -55,7 +57,21 @@ export const MESSAGE_TYPE_FILTERS = [
   { value: "buyer", label: "Buyer" },
   { value: "seller", label: "Seller" },
   { value: "newsletter", label: "Newsletter" },
+  { value: "role_request", label: "Role requests" },
 ] as const;
+
+/** Structured lead data: `details` when present, else legacy JSON `message`. */
+export function leadPayload(lead: Pick<LeadRecord, "details" | "message">): Record<string, unknown> {
+  if (lead.details && typeof lead.details === "object" && !Array.isArray(lead.details)) {
+    return lead.details;
+  }
+  return safeJson(lead.message);
+}
+
+/** True when `message` is readable text (not a legacy JSON blob). */
+export function isPlainMessage(message?: string | null): message is string {
+  return typeof message === "string" && message.trim() !== "" && !message.trim().startsWith("{");
+}
 
 function safeJson(message?: string | null): Record<string, unknown> {
   if (!message) return {};
@@ -82,6 +98,8 @@ export function leadTypeLabel(type: string): string {
       return "Seller";
     case "newsletter":
       return "Newsletter";
+    case "role_request":
+      return "Role request";
     default:
       return type.charAt(0).toUpperCase() + type.slice(1);
   }
@@ -90,7 +108,7 @@ export function leadTypeLabel(type: string): string {
 /** Gmail-style subject line for inbox rows */
 export function leadSubjectLine(lead: LeadRecord): string {
   const name = lead.contactName?.trim() || "Unknown";
-  const payload = safeJson(lead.message);
+  const payload = leadPayload(lead);
 
   switch (lead.type) {
     case "distribution": {
@@ -122,13 +140,17 @@ export function leadSubjectLine(lead: LeadRecord): string {
       return `Seller Registration by ${name}`;
     case "newsletter":
       return `Newsletter Signup: ${lead.email}`;
+    case "role_request": {
+      const wanted = (payload.requestedRole as string) || "new role";
+      return `Role request: ${wanted} access for ${name}`;
+    }
     default:
       return lead.subject?.trim() || `${leadTypeLabel(lead.type)} by ${name}`;
   }
 }
 
 export function leadPreview(lead: LeadRecord): string {
-  const payload = safeJson(lead.message);
+  const payload = leadPayload(lead);
   if (lead.type === "distribution") {
     const note = (payload.note as string) || "";
     const territory = (payload.territory as string) || "";
@@ -136,7 +158,7 @@ export function leadPreview(lead: LeadRecord): string {
   }
   if (lead.type === "quote") {
     const note = (payload.note as string) || "";
-    const qty = (payload.quantity as string) || "";
+    const qty = payload.quantity != null ? String(payload.quantity) : "";
     return [qty && `Qty ${qty}`, note].filter(Boolean).join(" · ") || lead.email;
   }
   if (typeof lead.message === "string" && lead.message && !lead.message.trim().startsWith("{")) {
@@ -145,6 +167,3 @@ export function leadPreview(lead: LeadRecord): string {
   return [lead.businessName, lead.email, lead.phone].filter(Boolean).join(" · ");
 }
 
-export function parseLeadPayload(message?: string | null) {
-  return safeJson(message);
-}

@@ -6,6 +6,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { getDashboardPath, type PortalRole } from "@/lib/auth/roles";
 import { usePortalUser } from "@/hooks/use-portal-user";
 import { syncPortalAccess } from "@/lib/auth/sync-portal-access";
+import { STOREFRONT_URL } from "@/lib/site-urls";
 
 const PUBLIC_PATHS = ["/login", "/sign-up", "/accept-invite", "/tasks"];
 const AUTH_SHELL_BYPASS = [
@@ -33,8 +34,7 @@ const ADMIN_ONLY_PREFIXES = [
   "/products",
 ];
 
-const STOREFRONT =
-  process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006";
+const STOREFRONT = STOREFRONT_URL;
 
 function isAdminRoute(pathname: string): boolean {
   if (pathname === "/") return true;

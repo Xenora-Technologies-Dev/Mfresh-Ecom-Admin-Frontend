@@ -26,7 +26,8 @@ import {
   leadSubjectLine,
   leadTypeLabel,
   markMessagesSectionSeen,
-  parseLeadPayload,
+  isPlainMessage,
+  leadPayload,
 } from "@/lib/messages";
 
 function asLead(row: Record<string, unknown>): LeadRecord {
@@ -166,7 +167,7 @@ export default function MessagesPage() {
     if (detail?.status) setStatusDraft(String(detail.status).toUpperCase());
   }, [detail?.id, detail?.status]);
 
-  const payload = detail ? parseLeadPayload(detail.message) : {};
+  const payload = detail ? leadPayload(detail) : {};
 
   return (
     <div className="-mx-2 flex h-[calc(100dvh-7.5rem)] min-h-[520px] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:-mx-0">
@@ -508,6 +509,8 @@ export default function MessagesPage() {
                         image?: string;
                         categoryName?: string;
                         country?: string;
+                        currency?: string;
+                        moqUnit?: string;
                       })
                     : null;
                 const quoteNote =
@@ -543,11 +546,17 @@ export default function MessagesPage() {
                     <div className="grid gap-2 sm:grid-cols-2">
                       <p className="text-sm">
                         <span className="font-semibold">Quantity: </span>
-                        {String(payload.quantity ?? "—")}
+                        {payload.quantity != null
+                          ? `${String(payload.quantity)} ${quoteProduct?.moqUnit ?? ""}`.trim()
+                          : "—"}
                       </p>
                       <p className="text-sm">
                         <span className="font-semibold">Target price: </span>
-                        {String(payload.targetPrice ?? "—")}
+                        {payload.targetPrice != null && payload.targetPrice !== ""
+                          ? `${String(payload.targetPrice)} ${quoteProduct?.currency ?? ""}${
+                              quoteProduct?.moqUnit ? ` / ${quoteProduct.moqUnit}` : ""
+                            }`.trim()
+                          : "—"}
                       </p>
                     </div>
                     {quoteNote ? (
@@ -584,12 +593,25 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
-              {(detail.type === "contact" ||
-                detail.type === "buyer" ||
-                detail.type === "seller" ||
-                detail.type === "newsletter") &&
-                detail.message &&
-                !detail.message.trim().startsWith("{") && (
+              {detail.type === "role_request" && (
+                <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                  <p className="text-sm">
+                    <span className="font-semibold">Current role: </span>
+                    {String(payload.currentRole ?? "none")}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Requested role: </span>
+                    {String(payload.requestedRole ?? "—")}
+                  </p>
+                  <p className="text-xs text-muted sm:col-span-2">
+                    Change the role on the user in Users if you approve it.
+                  </p>
+                </div>
+              )}
+
+              {detail.type !== "distribution" &&
+                detail.type !== "quote" &&
+                isPlainMessage(detail.message) && (
                   <div className="mt-6 whitespace-pre-wrap rounded-xl border border-border bg-[#f8fafc] p-4 text-sm leading-relaxed text-dark-gray">
                     {detail.message}
                   </div>

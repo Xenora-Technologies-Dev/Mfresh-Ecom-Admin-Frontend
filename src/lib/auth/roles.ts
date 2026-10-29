@@ -1,3 +1,4 @@
+import { STOREFRONT_URL } from "@/lib/site-urls";
 export type PortalRole = "admin" | "buyer" | "seller";
 
 export type SignupPortalRole = Exclude<PortalRole, "admin">;
@@ -11,8 +12,7 @@ export interface PortalUser {
   whatsapp?: string;
 }
 
-const STOREFRONT =
-  process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006";
+const STOREFRONT = STOREFRONT_URL;
 
 export function getDashboardPath(role: PortalRole): string {
   switch (role) {

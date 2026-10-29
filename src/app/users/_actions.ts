@@ -3,6 +3,7 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { parsePortalRole } from "@/lib/auth/roles";
+import { PORTAL_URL } from "@/lib/site-urls";
 
 export type PortalAdminUser = {
   id: string;
@@ -64,11 +65,14 @@ function isAdminMetadata(meta: Record<string, unknown> | null | undefined): bool
 }
 
 async function appOrigin(): Promise<string> {
+  // Invitation links must not be built from a spoofable Host header.
+  if (process.env.NEXT_PUBLIC_PORTAL_URL?.trim() || process.env.NODE_ENV === "production") {
+    return PORTAL_URL;
+  }
   const h = await headers();
   const host = h.get("x-forwarded-host") || h.get("host");
   const proto = h.get("x-forwarded-proto") || "http";
-  if (host) return `${proto}://${host}`;
-  return process.env.NEXT_PUBLIC_PORTAL_URL || "http://localhost:3007";
+  return host ? `${proto}://${host}` : PORTAL_URL;
 }
 
 export async function listPortalAdmins(): Promise<ListAdminsResult> {
