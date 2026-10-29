@@ -34,6 +34,7 @@ import type { PortalRole } from "@/lib/auth/roles";
 import { usePortalUser } from "@/hooks/use-portal-user";
 import { leadsApi } from "@/lib/api";
 import { getMessagesSeenAt } from "@/lib/messages";
+import { STOREFRONT_URL } from "@/lib/site-urls";
 
 type NavItem = {
   href: string;
@@ -45,7 +46,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin"] },
-  { href: "/orders", label: "Orders", icon: ClipboardList, roles: ["admin"] },
+  { href: "/orders", label: "Enquiries", icon: ClipboardList, roles: ["admin"] },
   { href: "/categories", label: "Categories", icon: FolderTree, roles: ["admin"] },
   { href: "/products", label: "Products", icon: Package, roles: ["admin"] },
   {
@@ -178,7 +179,7 @@ function PortalSidebar() {
 
         <div className="space-y-1 border-t border-white/10 p-4">
           <Link
-            href={process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006"}
+            href={STOREFRONT_URL}
             target="_blank"
             className="flex items-center gap-2 rounded-lg px-2 py-2 text-xs text-white/60 transition-colors hover:bg-white/5 hover:text-white"
           >

@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { SignIn, useSession, useUser } from "@clerk/nextjs";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 import { parsePortalRole } from "@/lib/auth/roles";
+import { STOREFRONT_URL } from "@/lib/site-urls";
 
-const STOREFRONT =
-  process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006";
+const STOREFRONT = STOREFRONT_URL;
 
 export default function LoginPage() {
   const router = useRouter();

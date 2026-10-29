@@ -26,7 +26,8 @@ import {
   leadSubjectLine,
   leadTypeLabel,
   markMessagesSectionSeen,
-  parseLeadPayload,
+  isPlainMessage,
+  leadPayload,
 } from "@/lib/messages";
 
 function asLead(row: Record<string, unknown>): LeadRecord {
@@ -41,6 +42,8 @@ function asLead(row: Record<string, unknown>): LeadRecord {
     country: (row.country as string) ?? null,
     subject: (row.subject as string) ?? null,
     message: (row.message as string) ?? null,
+    status: (row.status as string) ?? "NEW",
+    adminNotes: (row.adminNotes as string) ?? null,
     isRead: Boolean(row.isRead),
     readAt: (row.readAt as string) ?? null,
     createdAt: String(row.createdAt ?? ""),
@@ -122,6 +125,21 @@ export default function MessagesPage() {
     onError: (err) => toast.error(formatApiError(err)),
   });
 
+  const [statusDraft, setStatusDraft] = useState("NEW");
+
+  const statusMutation = useMutation({
+    mutationFn: (payload: { status: string; adminNotes?: string }) => {
+      if (!detail) throw new Error("No message selected");
+      return leadsApi.updateStatus(detail.id, payload);
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      void qc.invalidateQueries({ queryKey: ["messages"] });
+      void qc.invalidateQueries({ queryKey: ["message"] });
+    },
+    onError: (err) => toast.error(formatApiError(err)),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => leadsApi.remove(id),
     onSuccess: () => {
@@ -135,6 +153,7 @@ export default function MessagesPage() {
 
   const openMessage = (lead: LeadRecord) => {
     setSelectedId(lead.id);
+    setStatusDraft(String(lead.status || "NEW").toUpperCase());
     if (!lead.isRead) markReadMutation.mutate(lead.id);
   };
 
@@ -144,7 +163,11 @@ export default function MessagesPage() {
     setSearch(searchInput.trim());
   };
 
-  const payload = detail ? parseLeadPayload(detail.message) : {};
+  useEffect(() => {
+    if (detail?.status) setStatusDraft(String(detail.status).toUpperCase());
+  }, [detail?.id, detail?.status]);
+
+  const payload = detail ? leadPayload(detail) : {};
 
   return (
     <div className="-mx-2 flex h-[calc(100dvh-7.5rem)] min-h-[520px] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:-mx-0">
@@ -384,6 +407,31 @@ export default function MessagesPage() {
                 </Button>
               </div>
 
+              <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-border bg-light-gray/40 p-3">
+                <div>
+                  <p className="text-xs font-medium text-muted">Enquiry status</p>
+                  <select
+                    className="mt-1 rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+                    value={statusDraft}
+                    onChange={(e) => setStatusDraft(e.target.value)}
+                  >
+                    <option value="NEW">New</option>
+                    <option value="CONTACTED">Contacted</option>
+                    <option value="QUOTED">Quoted</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate({ status: statusDraft })}
+                >
+                  {statusMutation.isPending ? "Saving…" : "Save status"}
+                </Button>
+              </div>
+
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
                   {(detail.contactName || detail.email || "?").charAt(0).toUpperCase()}
@@ -461,6 +509,8 @@ export default function MessagesPage() {
                         image?: string;
                         categoryName?: string;
                         country?: string;
+                        currency?: string;
+                        moqUnit?: string;
                       })
                     : null;
                 const quoteNote =
@@ -496,11 +546,17 @@ export default function MessagesPage() {
                     <div className="grid gap-2 sm:grid-cols-2">
                       <p className="text-sm">
                         <span className="font-semibold">Quantity: </span>
-                        {String(payload.quantity ?? "—")}
+                        {payload.quantity != null
+                          ? `${String(payload.quantity)} ${quoteProduct?.moqUnit ?? ""}`.trim()
+                          : "—"}
                       </p>
                       <p className="text-sm">
                         <span className="font-semibold">Target price: </span>
-                        {String(payload.targetPrice ?? "—")}
+                        {payload.targetPrice != null && payload.targetPrice !== ""
+                          ? `${String(payload.targetPrice)} ${quoteProduct?.currency ?? ""}${
+                              quoteProduct?.moqUnit ? ` / ${quoteProduct.moqUnit}` : ""
+                            }`.trim()
+                          : "—"}
                       </p>
                     </div>
                     {quoteNote ? (
@@ -537,12 +593,25 @@ export default function MessagesPage() {
                 </div>
               ) : null}
 
-              {(detail.type === "contact" ||
-                detail.type === "buyer" ||
-                detail.type === "seller" ||
-                detail.type === "newsletter") &&
-                detail.message &&
-                !detail.message.trim().startsWith("{") && (
+              {detail.type === "role_request" && (
+                <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                  <p className="text-sm">
+                    <span className="font-semibold">Current role: </span>
+                    {String(payload.currentRole ?? "none")}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Requested role: </span>
+                    {String(payload.requestedRole ?? "—")}
+                  </p>
+                  <p className="text-xs text-muted sm:col-span-2">
+                    Change the role on the user in Users if you approve it.
+                  </p>
+                </div>
+              )}
+
+              {detail.type !== "distribution" &&
+                detail.type !== "quote" &&
+                isPlainMessage(detail.message) && (
                   <div className="mt-6 whitespace-pre-wrap rounded-xl border border-border bg-[#f8fafc] p-4 text-sm leading-relaxed text-dark-gray">
                     {detail.message}
                   </div>

@@ -28,6 +28,7 @@ import {
   type ThemePresetId,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { STOREFRONT_URL } from "@/lib/site-urls";
 
 const COLOR_FIELDS = [
   { key: "primary" as const, label: "Brand Color", hint: "Headings, links & main buttons" },
@@ -121,7 +122,7 @@ export default function ThemePage() {
     setTheme((prev) => ({ ...prev, [key]: value }));
   };
 
-  const storefrontUrl = process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006";
+  const storefrontUrl = STOREFRONT_URL;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-10">

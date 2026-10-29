@@ -44,20 +44,8 @@ export async function completeOnboarding(
     asString(formData.get("whatsapp")) ||
     (typeof unsafe.whatsapp === "string" ? unsafe.whatsapp : "");
 
-  const portalRole =
-    parsePortalRole(asString(formData.get("portalRole"))) ||
-    parsePortalRole(unsafe.portalRole) ||
-    parsePortalRole(publicMeta.portalRole);
-
-  if (!portalRole) {
-    return {
-      ok: false,
-      error: "Select a portal role (Buyer or Seller) to continue.",
-    };
-  }
-
-  // Admin accounts are invite-only and should already have metadata set.
-  if (portalRole === "admin") {
+  // Never accept admin from the client. Invite-only / API allowlist only.
+  if (parsePortalRole(publicMeta.portalRole) === "admin") {
     await client.users.updateUserMetadata(userId, {
       publicMetadata: {
         ...publicMeta,
@@ -66,6 +54,19 @@ export async function completeOnboarding(
       },
     });
     return { ok: true, organizationId: "", portalRole: "admin" };
+  }
+
+  const requested =
+    parsePortalRole(asString(formData.get("portalRole"))) ||
+    parsePortalRole(unsafe.portalRole);
+  const portalRole =
+    requested === "buyer" || requested === "seller" ? requested : null;
+
+  if (!portalRole) {
+    return {
+      ok: false,
+      error: "Select a portal role (Buyer or Seller) to continue.",
+    };
   }
 
   if (!organizationName) {

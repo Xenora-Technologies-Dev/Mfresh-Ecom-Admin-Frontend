@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { STOREFRONT_URL } from "@/lib/site-urls";
 
-const STOREFRONT =
-  process.env.NEXT_PUBLIC_STOREFRONT_URL ?? "http://localhost:3006";
+const STOREFRONT = STOREFRONT_URL;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
